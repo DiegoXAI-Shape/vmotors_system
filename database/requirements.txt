@@ -1,6 +1,0 @@
-# VMotors · dependencias del generador de base de datos
-# Instalación:  pip install -r requirements.txt
-
-psycopg[binary]>=3.1,<4      # Controlador de PostgreSQL (incluye binarios precompilados)
-Faker>=25.0                  # Generación de datos ficticios en español de México
-python-dotenv>=1.0           # Lectura de credenciales desde el archivo .env
