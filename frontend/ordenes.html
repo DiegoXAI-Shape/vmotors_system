@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Órdenes de servicio · VMotors</title>
+<link rel="icon" href="assets/img/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body data-page="ordenes" data-title="Órdenes de servicio" data-crumb="Expedientes · Módulo 3.0">
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <div class="main">
+    <header id="topbar"></header>
+    <main class="content">
+
+      <div class="page-head">
+        <div>
+          <h2>Bitácora de órdenes</h2>
+          <p>Cada orden nace de una cita confirmada (relación 1 a 1) y concentra el diagnóstico técnico, las refacciones instaladas y el costo final a cobrar.</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn" data-demo="Exportación a CSV (demostración).">Exportar</button>
+          <a class="btn btn-primary" href="recepcion.html">Abrir orden</a>
+        </div>
+      </div>
+
+      <section class="grid g-4" style="margin-bottom:18px">
+        <article class="kpi" style="--kpi-accent: var(--st-recibido)">
+          <div class="kpi-label">Órdenes del periodo</div><div class="kpi-value num" id="k-periodo">0</div>
+          <div class="kpi-foot dim">Septiembre 2026</div>
+        </article>
+        <article class="kpi" style="--kpi-accent: var(--st-reparacion)">
+          <div class="kpi-label">Importe en proceso</div><div class="kpi-value num" id="k-proceso">$0</div>
+          <div class="kpi-foot dim">Trabajos autorizados sin liquidar</div>
+        </article>
+        <article class="kpi" style="--kpi-accent: var(--st-terminado)">
+          <div class="kpi-label">Importe cobrado</div><div class="kpi-value num" id="k-cobrado">$0</div>
+          <div class="kpi-foot dim">Órdenes entregadas y firmadas</div>
+        </article>
+        <article class="kpi" style="--kpi-accent: var(--accent)">
+          <div class="kpi-label">Ticket promedio</div><div class="kpi-value num" id="k-ticket">$0</div>
+          <div class="kpi-foot dim">Sobre órdenes con costo capturado</div>
+        </article>
+      </section>
+
+      <article class="card">
+        <div class="toolbar">
+          <div class="search" style="width:300px">
+            <span data-icon="buscar"></span>
+            <input type="search" placeholder="Folio, placa o cliente" data-search-target="#tabla-ordenes">
+          </div>
+          <div class="seg" data-filter-target="#tabla-ordenes tbody">
+            <button class="is-active" data-value="todos">Todas</button>
+            <button data-value="Pendiente">Pendientes</button>
+            <button data-value="En reparación">En reparación</button>
+            <button data-value="Terminado">Terminadas</button>
+            <button data-value="Entregado">Entregadas</button>
+          </div>
+          <div style="flex:1 1 auto"></div>
+          <button class="btn btn-sm" data-demo="Filtros avanzados (demostración).">
+            <span data-icon="filtro"></span> Rango de fechas
+          </button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="tbl" id="tabla-ordenes">
+            <thead>
+              <tr>
+                <th>Folio</th><th>Unidad</th><th>Cliente</th><th>Ingreso</th>
+                <th>Promesa</th><th>Etapa</th><th class="tright">Importe</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="tbody-ordenes"></tbody>
+          </table>
+        </div>
+
+        <div class="card-foot">
+          <span>Órdenes activas e históricas del mes en curso</span>
+          <div class="pagination">
+            <button>‹</button><button class="is-active">1</button>
+            <button data-demo="Paginación (demostración).">2</button>
+            <button data-demo="Paginación (demostración).">›</button>
+          </div>
+        </div>
+      </article>
+
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+function initPagina() {
+  const ordenes = VM.ordenesExpandidas();
+  const cobrado = ordenes.filter(o => o.estatus === "Entregado").reduce((s, o) => s + o.costo_total, 0);
+  const proceso = ordenes.filter(o => o.estatus !== "Entregado").reduce((s, o) => s + o.costo_total, 0);
+  const conCosto = ordenes.filter(o => o.costo_total > 0);
+
+  document.getElementById("k-periodo").textContent = ordenes.length;
+  document.getElementById("k-proceso").textContent = fmt.money(proceso, 0);
+  document.getElementById("k-cobrado").textContent = fmt.money(cobrado, 0);
+  document.getElementById("k-ticket").textContent  =
+    fmt.money(conCosto.reduce((s, o) => s + o.costo_total, 0) / conCosto.length, 0);
+
+  document.getElementById("tbody-ordenes").innerHTML = ordenes
+    .sort((a, b) => b.fecha_ingreso.localeCompare(a.fecha_ingreso))
+    .map(o => `<tr data-estatus="${o.estatus}">
+      <td class="folio nowrap">${o.folio}</td>
+      <td>
+        <div class="cell-strong">${o.vehiculo.marca} ${o.vehiculo.modelo}</div>
+        <div class="cell-sub"><span class="plate">${o.vehiculo.placas}</span></div>
+      </td>
+      <td>
+        <div>${VM.nombreCliente(o.cliente)}</div>
+        <div class="cell-sub mono">${o.cliente.telefono}</div>
+      </td>
+      <td class="nowrap">${fmt.fechaCorta(o.fecha_ingreso)}<div class="cell-sub num">${fmt.hora(o.fecha_ingreso)}</div></td>
+      <td class="nowrap">${o.fecha_entrega
+          ? `<span class="dim">Entregado</span><div class="cell-sub num">${fmt.hora(o.fecha_entrega)}</div>`
+          : `${fmt.fechaCorta(o.hora_prometida)}<div class="cell-sub num">${fmt.hora(o.hora_prometida)}</div>`}</td>
+      <td>${pillOrden(o.estatus)}</td>
+      <td class="tright num cell-strong">${o.costo_total > 0 ? fmt.money(o.costo_total) : '<span class="dim">Por definir</span>'}</td>
+      <td class="actions">
+        <a class="btn btn-sm" href="orden-detalle.html">Abrir</a>
+      </td>
+    </tr>`).join("");
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monitor del taller · VMotors</title>
+<link rel="icon" href="assets/img/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body data-page="taller" data-title="Monitor del taller" data-crumb="Operación diaria · Tablero Kanban">
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <div class="main">
+    <header id="topbar"></header>
+    <main class="content">
+
+      <div class="page-head">
+        <div>
+          <h2>Estatus de las unidades en piso</h2>
+          <p>Arrastre una tarjeta entre columnas para mover la orden a la siguiente etapa. El flujo es unidireccional: Recibido → Diagnóstico → Reparación → Terminado → Entregado.</p>
+        </div>
+        <div class="page-actions">
+          <div class="seg" id="filtro-bahia">
+            <button class="is-active">Todas las bahías</button>
+            <button data-demo="Filtro por bahía (demostración).">Bahía 1</button>
+            <button data-demo="Filtro por bahía (demostración).">Bahía 2</button>
+          </div>
+          <a class="btn btn-primary" href="recepcion.html">Recibir vehículo</a>
+        </div>
+      </div>
+
+      <section class="grid g-4" style="margin-bottom:18px">
+        <article class="kpi" style="--kpi-accent: var(--st-recibido)">
+          <div class="kpi-label">Órdenes abiertas</div>
+          <div class="kpi-value num" id="k-abiertas">0</div>
+          <div class="kpi-foot dim">Incluye unidades pendientes de ingreso</div>
+        </article>
+        <article class="kpi" style="--kpi-accent: var(--st-reparacion)">
+          <div class="kpi-label">En reparación</div>
+          <div class="kpi-value num" id="k-reparacion">0</div>
+          <div class="kpi-foot dim">Con refacciones autorizadas</div>
+        </article>
+        <article class="kpi" style="--kpi-accent: var(--st-terminado)">
+          <div class="kpi-label">Terminadas</div>
+          <div class="kpi-value num" id="k-terminadas">0</div>
+          <div class="kpi-foot dim">Esperan liquidación del cliente</div>
+        </article>
+        <article class="kpi" style="--kpi-accent: var(--critical)">
+          <div class="kpi-label">Fuera de hora prometida</div>
+          <div class="kpi-value num" id="k-retraso">0</div>
+          <div class="kpi-foot dim">Requieren aviso al cliente</div>
+        </article>
+      </section>
+
+      <div class="kanban" id="kanban"></div>
+
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+function initPagina() {
+  const ordenes = VM.ordenesExpandidas();
+
+  /* ---------------------------- KPIs ---------------------------- */
+  document.getElementById("k-abiertas").textContent   = ordenes.filter(o => o.estatus !== "Entregado").length;
+  document.getElementById("k-reparacion").textContent = ordenes.filter(o => o.estatus === "En reparación").length;
+  document.getElementById("k-terminadas").textContent = ordenes.filter(o => o.estatus === "Terminado").length;
+  document.getElementById("k-retraso").textContent    = ordenes.filter(o => enRetraso(o)).length;
+
+  /* ------------------------- Tablero Kanban ------------------------- */
+  document.getElementById("kanban").innerHTML = VM.ESTATUS_ORDEN.map(col => {
+    const items = ordenes.filter(o => o.estatus === col.key);
+    return `<section class="kb-col" data-estatus="${col.key}" data-nombre="${col.label}" data-color="${col.color}">
+      <header class="kb-head">
+        <span class="kb-swatch" style="background:${col.color}"></span>
+        <span class="kb-title">${col.label}</span>
+        <span class="kb-count">${items.length}</span>
+      </header>
+      <div class="kb-body">
+        ${items.length ? items.map(o => tarjeta(o, col)).join("") : '<div class="kb-empty">Sin unidades</div>'}
+      </div>
+    </section>`;
+  }).join("");
+
+  document.getElementById("kanban").addEventListener("click", (e) => {
+    if (e.target.closest(".kb-card")) window.location.href = "orden-detalle.html";
+  });
+}
+
+/* Una unidad va retrasada si su hora prometida ya pasó y el trabajo sigue abierto */
+function enRetraso(o) {
+  if (!o.hora_prometida) return false;
+  if (o.estatus === "Terminado" || o.estatus === "Entregado") return false;
+  return o.hora_prometida < VM.AHORA;
+}
+
+function tarjeta(o, col) {
+  const v = o.vehiculo, c = o.cliente;
+  const retraso = enRetraso(o);
+  return `<article class="kb-card" draggable="true" style="--kb-accent:${col.color}">
+    <div class="kb-card-title">${v.marca} ${v.modelo}</div>
+    <div class="kb-card-sub">${v.anio} · ${v.color} · ${v.transmision}</div>
+    <div style="margin-top:9px"><span class="plate">${v.placas}</span></div>
+    <div class="kb-card-sub" style="margin-top:9px">${o.cita.motivo_ingreso.slice(0, 58)}${o.cita.motivo_ingreso.length > 58 ? "…" : ""}</div>
+    <div class="kb-card-foot">
+      <span class="folio">${o.folio}</span>
+      ${retraso
+        ? `<span class="pill st-critical" style="font-size:10.5px">${icon("alerta")} ${fmt.hora(o.hora_prometida)}</span>`
+        : `<span class="row" style="gap:5px"><span data-icon="reloj" style="width:13px;height:13px"></span>${fmt.hora(o.hora_prometida)}</span>`}
+    </div>
+    <div class="kb-card-foot" style="border-top:none;padding-top:5px;margin-top:0">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${VM.nombreCliente(c)}</span>
+      <span class="num nowrap">${o.costo_total > 0 ? fmt.money(o.costo_total, 0) : "—"}</span>
+    </div>
+  </article>`;
+}
+</script>
+</body>
+</html>

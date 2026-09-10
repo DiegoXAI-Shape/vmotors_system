@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reportes · VMotors</title>
+<link rel="icon" href="assets/img/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body data-page="reportes" data-title="Reportes automatizados" data-crumb="Análisis · Salidas del sistema">
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <div class="main">
+    <header id="topbar"></header>
+    <main class="content">
+
+      <div class="page-head">
+        <div>
+          <h2>Salidas documentales</h2>
+          <p>Tres reportes cubren la operación diaria: la agenda del día con bahías libres, el historial acumulado por matrícula y el resumen mensual de facturación.</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn" data-demo="Reporte descargado en PDF (demostración).">
+            <span data-icon="descargar"></span> Descargar PDF
+          </button>
+          <button class="btn btn-dark" data-demo="Envío programado del reporte (demostración).">Programar envío</button>
+        </div>
+      </div>
+
+      <div class="seg" id="tabs" style="margin-bottom:18px">
+        <button class="is-active" data-tab="diario">Reporte diario de citas y bahías</button>
+        <button data-tab="placa">Historial clínico por placa</button>
+        <button data-tab="mensual">Resumen mensual</button>
+      </div>
+
+      <!-- ============ REPORTE DIARIO ============ -->
+      <section data-panel="diario">
+        <div class="grid g-4" style="margin-bottom:16px">
+          <article class="kpi" style="--kpi-accent: var(--st-recibido)">
+            <div class="kpi-label">Citas confirmadas hoy</div><div class="kpi-value num" id="r-citas">0</div>
+            <div class="kpi-foot dim">Jueves 10 de septiembre</div>
+          </article>
+          <article class="kpi" style="--kpi-accent: var(--st-terminado)">
+            <div class="kpi-label">Bloques libres</div><div class="kpi-value num" id="r-libres">0</div>
+            <div class="kpi-foot dim">Disponibles para atención inmediata</div>
+          </article>
+          <article class="kpi" style="--kpi-accent: var(--st-reparacion)">
+            <div class="kpi-label">Horas comprometidas</div><div class="kpi-value num" id="r-horas">0<span class="unit">h</span></div>
+            <div class="kpi-foot dim">Suma de duraciones agendadas</div>
+          </article>
+          <article class="kpi" style="--kpi-accent: var(--accent)">
+            <div class="kpi-label">Ocupación</div><div class="kpi-value num" id="r-ocup">0<span class="unit">%</span></div>
+            <div class="kpi-foot dim">Bloques comprometidos sobre 10</div>
+          </article>
+        </div>
+
+        <div class="grid g-main" style="align-items:start">
+          <article class="card">
+            <div class="card-head">
+              <div><h3>Agenda cronológica del día</h3><div class="sub">Citas confirmadas, horas pactadas y motivo de ingreso</div></div>
+            </div>
+            <div class="table-wrap">
+              <table class="tbl">
+                <thead><tr><th>Bloque</th><th>Unidad</th><th>Cliente</th><th>Motivo</th><th>Estatus</th></tr></thead>
+                <tbody id="tbody-diario"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-head"><div><h3>Disponibilidad de bloques</h3><div class="sub">Espacios libres para atención inmediata</div></div></div>
+            <div class="card-body">
+              <div class="slots" id="libres"></div>
+              <p class="hint mt-16">Los bloques marcados en rojo ya están comprometidos con una cita activa.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ============ HISTORIAL POR PLACA ============ -->
+      <section data-panel="placa" hidden>
+        <article class="card" style="margin-bottom:16px">
+          <div class="toolbar">
+            <div class="field" style="width:420px">
+              <label>Seleccione la matrícula a consultar</label>
+              <select class="select" id="sel-placa"></select>
+            </div>
+            <div style="flex:1 1 auto"></div>
+            <button class="btn btn-sm" data-demo="Impresión del historial (demostración).">
+              <span data-icon="imprimir"></span> Imprimir
+            </button>
+          </div>
+        </article>
+
+        <div class="grid g-side" style="align-items:start">
+          <article class="card">
+            <div class="card-head"><div><h3>Ficha de la unidad</h3></div></div>
+            <div class="card-body" id="ficha-placa"></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <div><h3>Bitácora acumulativa</h3><div class="sub">Kilometrajes, fallas recurrentes y montos pagados</div></div>
+            </div>
+            <div class="table-wrap">
+              <table class="tbl">
+                <thead><tr><th>Fecha</th><th>Folio</th><th>Trabajo realizado</th><th class="tright">Km</th><th class="tright">Importe</th></tr></thead>
+                <tbody id="tbody-placa"></tbody>
+              </table>
+            </div>
+            <div class="card-foot">
+              <span>Total histórico pagado por la unidad</span>
+              <strong class="num" id="total-placa">$0.00</strong>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ============ RESUMEN MENSUAL ============ -->
+      <section data-panel="mensual" hidden>
+        <div class="grid g-main" style="align-items:start">
+          <article class="card">
+            <div class="card-head">
+              <div><h3>Facturación por mes</h3><div class="sub">Órdenes liquidadas · marzo a septiembre 2026</div></div>
+            </div>
+            <div class="card-body">
+              <div class="chart-holder" id="rep-ingresos"></div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-head"><div><h3>Servicios por tipo</h3><div class="sub">Acumulado del semestre</div></div></div>
+            <div class="card-body"><div id="rep-tipos"></div></div>
+          </article>
+        </div>
+
+        <div class="grid g-main mt-16" style="align-items:start">
+          <article class="card">
+            <div class="card-head"><div><h3>Servicios atendidos por semana</h3><div class="sub">Últimas 7 semanas</div></div></div>
+            <div class="card-body"><div class="chart-holder" id="rep-semanas"></div></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head"><div><h3>Indicadores del periodo</h3></div></div>
+            <div class="card-body">
+              <div class="stack" style="gap:18px">
+                <div>
+                  <div class="kpi-label">Facturación acumulada (mar-sep)</div>
+                  <div class="kpi-value num">$1,043,350</div>
+                </div>
+                <div class="row" style="gap:30px">
+                  <div>
+                    <div class="kpi-label">Órdenes cerradas</div>
+                    <div class="kpi-value num" style="font-size:22px">150</div>
+                  </div>
+                  <div>
+                    <div class="kpi-label">Ticket promedio</div>
+                    <div class="kpi-value num" style="font-size:22px">$6,955</div>
+                  </div>
+                  <div>
+                    <div class="kpi-label">Días promedio en taller</div>
+                    <div class="kpi-value num" style="font-size:22px">1.4</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+function initPagina() {
+  reporteDiario();
+  reportePlaca();
+  reporteMensual();
+
+  document.getElementById("tabs").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    document.querySelectorAll("[data-panel]").forEach(p => p.hidden = p.dataset.panel !== b.dataset.tab);
+    _charts.forEach(f => f());   /* los graficos ocultos necesitan medirse de nuevo */
+  });
+}
+
+/* ------------------------- Reporte diario ------------------------- */
+function reporteDiario() {
+  const citasHoy = VM.citas
+    .filter(c => c.fecha === VM.HOY && c.estatus_cita !== "Cancelada")
+    .sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
+
+  const horas = citasHoy.reduce((s, c) => s + (parseInt(c.hora_fin) - parseInt(c.hora_inicio)), 0);
+  const ocupadas = citasHoy.map(c => c.hora_inicio);
+  const libres = VM.BLOQUES_HORARIOS.filter(h => !ocupadas.includes(h));
+
+  document.getElementById("r-citas").textContent = citasHoy.length;
+  document.getElementById("r-libres").textContent = libres.length;
+  document.getElementById("r-horas").innerHTML = horas + '<span class="unit">h</span>';
+  document.getElementById("r-ocup").innerHTML =
+    Math.round(ocupadas.length / VM.BLOQUES_HORARIOS.length * 100) + '<span class="unit">%</span>';
+
+  document.getElementById("tbody-diario").innerHTML = citasHoy.map(c => {
+    const v = VM.vehiculo(c.id_vehiculo);
+    const cl = VM.cliente(v.id_cliente);
+    const o = VM.ordenDeCita(c.id_cita);
+    return `<tr>
+      <td class="num nowrap cell-strong">${c.hora_inicio} – ${c.hora_fin}</td>
+      <td>
+        <div class="cell-strong">${v.marca} ${v.modelo}</div>
+        <div class="cell-sub"><span class="plate">${v.placas}</span></div>
+      </td>
+      <td>${VM.nombreCliente(cl)}<div class="cell-sub mono">${cl.telefono}</div></td>
+      <td style="max-width:320px">${c.motivo_ingreso}</td>
+      <td>${o ? pillOrden(o.estatus) : pillCita(c.estatus_cita)}</td>
+    </tr>`;
+  }).join("");
+
+  document.getElementById("libres").innerHTML = VM.BLOQUES_HORARIOS.map(h =>
+    `<div class="slot ${ocupadas.includes(h) ? "is-taken" : ""}">${h}</div>`
+  ).join("");
+}
+
+/* ------------------------- Historial por placa ------------------------- */
+function reportePlaca() {
+  const sel = document.getElementById("sel-placa");
+  sel.innerHTML = VM.vehiculos.map(v =>
+    `<option value="${v.id_vehiculo}">${v.placas} — ${v.marca} ${v.modelo} ${v.anio}</option>`).join("");
+  sel.value = 1;
+  sel.addEventListener("change", () => pintarPlaca(+sel.value));
+  pintarPlaca(1);
+}
+
+function pintarPlaca(id) {
+  const v  = VM.vehiculo(id);
+  const cl = VM.cliente(v.id_cliente);
+  const citas = VM.citasDeVehiculo(id).sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const histo = VM.ordenes_historicas.filter(h => h.id_vehiculo === id);
+
+  document.getElementById("ficha-placa").innerHTML = `
+    <div class="row" style="gap:12px;margin-bottom:16px">
+      <div class="li-icon info" style="width:42px;height:42px;border-radius:11px">
+        ${icon("vehiculos")}
+      </div>
+      <div>
+        <div style="font-size:15px;font-weight:650">${v.marca} ${v.modelo}</div>
+        <div class="dim" style="font-size:12px">${v.anio} · ${v.color}</div>
+      </div>
+    </div>
+    <dl class="dl">
+      <dt>Placas</dt><dd class="mono">${v.placas}</dd>
+      <dt>Transmisión</dt><dd>${v.transmision}</dd>
+      <dt>Motor</dt><dd>${v.motor}</dd>
+      <dt>Propietario</dt><dd>${VM.nombreCliente(cl)}</dd>
+      <dt>Teléfono</dt><dd class="mono">${cl.telefono}</dd>
+      <dt>Visitas</dt><dd class="num">${citas.length}</dd>
+    </dl>`;
+
+  let total = 0;
+  const filas = citas.map(c => {
+    const o = VM.ordenDeCita(c.id_cita);
+    const h = histo.find(x => x.fecha_entrega.slice(0, 10) === c.fecha);
+    const importe = o ? o.costo_total : (h ? h.costo_total : 0);
+    total += importe;
+    return `<tr>
+      <td class="nowrap">${fmt.fechaCorta(c.fecha)}</td>
+      <td class="folio">${o ? o.folio : (h ? h.folio : "—")}</td>
+      <td style="max-width:340px">${(o && o.diagnostico) || (h && h.diagnostico) || c.motivo_ingreso}</td>
+      <td class="tright num">${o ? fmt.int(o.kilometraje) : (h ? fmt.int(h.kilometraje) : "—")}</td>
+      <td class="tright num cell-strong">${importe > 0 ? fmt.money(importe) : "—"}</td>
+    </tr>`;
+  }).join("");
+
+  document.getElementById("tbody-placa").innerHTML = filas ||
+    `<tr><td colspan="5" class="tcenter dim" style="padding:26px">Sin visitas registradas para esta unidad.</td></tr>`;
+  document.getElementById("total-placa").textContent = fmt.money(total);
+}
+
+/* ------------------------- Resumen mensual ------------------------- */
+function reporteMensual() {
+  registrarChart(() => barChart(
+    document.getElementById("rep-ingresos"),
+    VM.ingresosMensuales.map(d => ({ etiqueta: d.mes, valor: d.valor })),
+    { alto: 240, resaltarUltima: true, aria: "Facturación mensual",
+      formato: v => fmt.money(v, 0), formatoEje: v => fmt.moneyShort(v) }
+  ));
+
+  registrarChart(() => lineChart(
+    document.getElementById("rep-semanas"),
+    VM.serviciosPorSemana.map(d => ({ etiqueta: d.sem, valor: d.valor })),
+    { alto: 210, aria: "Servicios por semana" }
+  ));
+
+  hbars(document.getElementById("rep-tipos"), VM.tiposServicio, { sufijo: "" });
+}
+</script>
+</body>
+</html>

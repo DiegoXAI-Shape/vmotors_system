@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clientes · VMotors</title>
+<link rel="icon" href="assets/img/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body data-page="clientes" data-title="Padrón de clientes" data-crumb="Expedientes · Módulo 1.0">
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <div class="main">
+    <header id="topbar"></header>
+    <main class="content">
+
+      <div class="page-head">
+        <div>
+          <h2>Clientes registrados</h2>
+          <p>Expediente único por propietario. Cada cliente puede tener una o varias unidades vinculadas (relación 1 a N con vehículos).</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn" data-demo="Exportación a CSV (demostración).">Exportar</button>
+          <a class="btn btn-primary" href="recepcion.html">Nuevo cliente</a>
+        </div>
+      </div>
+
+      <section class="grid g-4" style="margin-bottom:18px">
+        <article class="kpi"><div class="kpi-label">Clientes en padrón</div><div class="kpi-value num" id="k-total">0</div><div class="kpi-foot dim">Altas acumuladas desde 2024</div></article>
+        <article class="kpi"><div class="kpi-label">Con facturación</div><div class="kpi-value num" id="k-rfc">0</div><div class="kpi-foot dim">Cuentan con R.F.C. capturado</div></article>
+        <article class="kpi"><div class="kpi-label">Aceptan promociones</div><div class="kpi-value num" id="k-promo">0</div><div class="kpi-foot dim">Base para recordatorios por correo</div></article>
+        <article class="kpi"><div class="kpi-label">Unidades vinculadas</div><div class="kpi-value num" id="k-veh">0</div><div class="kpi-foot dim">Promedio de <span id="k-prom">0</span> por cliente</div></article>
+      </section>
+
+      <article class="card">
+        <div class="toolbar">
+          <div class="search">
+            <span data-icon="buscar"></span>
+            <input type="search" placeholder="Nombre, teléfono, RFC o municipio" data-search-target="#tabla-clientes">
+          </div>
+          <div class="seg">
+            <button class="is-active">Todos</button>
+            <button data-demo="Filtro por tipo de cliente (demostración).">Persona física</button>
+            <button data-demo="Filtro por tipo de cliente (demostración).">Empresa</button>
+          </div>
+          <div style="flex:1 1 auto"></div>
+          <button class="btn btn-sm" data-demo="Filtros avanzados (demostración).">
+            <span data-icon="filtro"></span> Filtros
+          </button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="tbl" id="tabla-clientes">
+            <thead>
+              <tr>
+                <th>Cliente</th><th>Contacto</th><th>Domicilio</th>
+                <th>R.F.C.</th><th>Unidades</th><th>Alta</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="tbody-clientes"></tbody>
+          </table>
+        </div>
+
+        <div class="card-foot">
+          <span>Mostrando <strong id="n-mostrados">0</strong> de <strong id="n-total">0</strong> registros</span>
+          <div class="pagination">
+            <button>‹</button>
+            <button class="is-active">1</button>
+            <button data-demo="Paginación (demostración).">2</button>
+            <button data-demo="Paginación (demostración).">3</button>
+            <button data-demo="Paginación (demostración).">›</button>
+          </div>
+        </div>
+      </article>
+
+    </main>
+  </div>
+</div>
+
+<!-- Ficha del cliente -->
+<div class="modal-backdrop" id="modal-cliente">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h3 id="fc-nombre">Ficha del cliente</h3>
+        <div class="sub dim" id="fc-sub"></div>
+      </div>
+      <button class="btn btn-ghost btn-icon" data-modal-close><span data-icon="cerrar"></span></button>
+    </div>
+    <div class="modal-body" id="fc-body"></div>
+    <div class="modal-foot">
+      <button class="btn" data-modal-close>Cerrar</button>
+      <button class="btn" data-demo="Edición de expediente (demostración).">Editar</button>
+      <a class="btn btn-primary" href="agenda.html">Agendar cita</a>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+function initPagina() {
+  const conRfc  = VM.clientes.filter(c => c.rfc).length;
+  const conProm = VM.clientes.filter(c => c.acepta_promociones).length;
+
+  document.getElementById("k-total").textContent = VM.clientes.length;
+  document.getElementById("k-rfc").textContent   = conRfc;
+  document.getElementById("k-promo").textContent = conProm;
+  document.getElementById("k-veh").textContent   = VM.vehiculos.length;
+  document.getElementById("k-prom").textContent  = (VM.vehiculos.length / VM.clientes.length).toFixed(1);
+  document.getElementById("n-mostrados").textContent = VM.clientes.length;
+  document.getElementById("n-total").textContent     = VM.clientes.length;
+
+  document.getElementById("tbody-clientes").innerHTML = VM.clientes.map(c => {
+    const unidades = VM.vehiculosDeCliente(c.id_cliente);
+    return `<tr data-cliente="${c.id_cliente}">
+      <td>
+        <div class="person">
+          <span class="av">${iniciales(VM.nombreCliente(c))}</span>
+          <div>
+            <div class="cell-strong">${VM.nombreCliente(c)}</div>
+            <div class="cell-sub">${c.razon_social || "Persona física"}</div>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div class="mono">${c.telefono}</div>
+        <div class="cell-sub">${c.correo || "Sin correo registrado"}</div>
+      </td>
+      <td>
+        <div>${c.municipio}</div>
+        <div class="cell-sub">${c.colonia} · C.P. ${c.codigo_postal}</div>
+      </td>
+      <td>${c.rfc ? `<span class="mono">${c.rfc}</span>` : '<span class="dim">—</span>'}</td>
+      <td>
+        <div class="row" style="gap:5px;flex-wrap:wrap">
+          ${unidades.slice(0, 2).map(v => `<span class="plate">${v.placas}</span>`).join("")}
+          ${unidades.length > 2 ? `<span class="pill st-neutral pill-plain">+${unidades.length - 2}</span>` : ""}
+        </div>
+      </td>
+      <td class="nowrap dim">${fmt.fecha(c.fecha_registro)}</td>
+      <td class="actions">
+        <button class="btn btn-sm" data-ver="${c.id_cliente}">Ver ficha</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  document.getElementById("tbody-clientes").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-ver]");
+    if (b) abrirFicha(+b.dataset.ver);
+  });
+}
+
+function abrirFicha(id) {
+  const c = VM.cliente(id);
+  const unidades = VM.vehiculosDeCliente(id);
+  const citas = VM.citas.filter(x => unidades.some(u => u.id_vehiculo === x.id_vehiculo));
+
+  document.getElementById("fc-nombre").textContent = VM.nombreCliente(c);
+  document.getElementById("fc-sub").textContent =
+    `${c.razon_social || "Persona física"} · Cliente #${String(c.id_cliente).padStart(4, "0")} · Alta ${fmt.fecha(c.fecha_registro)}`;
+
+  document.getElementById("fc-body").innerHTML = `
+    <div class="spec-grid" style="margin-bottom:20px">
+      <div class="spec"><div class="s-k">Teléfono casa</div><div class="s-v mono">${c.telefono}</div></div>
+      <div class="spec"><div class="s-k">Teléfono oficina</div><div class="s-v mono">${c.telefono_oficina || "—"}</div></div>
+      <div class="spec"><div class="s-k">R.F.C.</div><div class="s-v mono">${c.rfc || "—"}</div></div>
+      <div class="spec"><div class="s-k">Promociones</div><div class="s-v">${c.acepta_promociones ? pill("Sí acepta", "st-terminado") : pill("No acepta", "st-neutral")}</div></div>
+    </div>
+
+    <div class="fieldset-title">Domicilio</div>
+    <p class="muted" style="margin:8px 0 20px">
+      ${c.calle} ${c.numero}, Col. ${c.colonia}, ${c.municipio}, ${c.estado}. C.P. ${c.codigo_postal}<br>
+      <span class="dim">${c.correo || "Sin correo electrónico registrado"}</span>
+    </p>
+
+    <div class="fieldset-title">Unidades registradas (${unidades.length})</div>
+    <div class="table-wrap" style="border:1px solid var(--border);border-radius:10px;margin:10px 0 20px">
+      <table class="tbl">
+        <thead><tr><th>Placas</th><th>Vehículo</th><th>Año</th><th>Transmisión</th><th>Visitas</th></tr></thead>
+        <tbody>
+          ${unidades.map(v => `<tr>
+            <td><span class="plate">${v.placas}</span></td>
+            <td class="cell-strong">${v.marca} ${v.modelo}</td>
+            <td class="num">${v.anio}</td>
+            <td>${v.transmision}</td>
+            <td class="num">${VM.citasDeVehiculo(v.id_vehiculo).length}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="fieldset-title">Actividad</div>
+    <div class="row mt-16" style="gap:26px">
+      <div><div class="kpi-label">Citas totales</div><div class="kpi-value num" style="font-size:22px">${citas.length}</div></div>
+      <div><div class="kpi-label">Última visita</div><div class="kpi-value" style="font-size:22px">${fmt.fecha(citas.map(x => x.fecha).sort().reverse()[0] || null)}</div></div>
+    </div>`;
+
+  document.getElementById("modal-cliente").classList.add("is-open");
+}
+</script>
+</body>
+</html>

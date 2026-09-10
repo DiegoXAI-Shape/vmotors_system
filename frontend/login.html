@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acceso · VMotors</title>
+<link rel="icon" href="assets/img/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+<div class="login-wrap">
+
+  <aside class="login-aside">
+    <div class="row" style="gap:11px">
+      <div class="brand-mark">VM</div>
+      <div class="brand-text">
+        <span class="brand-name">VMOTORS</span>
+        <span class="brand-sub">Taller automotriz</span>
+      </div>
+    </div>
+
+    <div style="position:relative;z-index:1">
+      <h2>El control del taller, en una sola pantalla.</h2>
+      <p>Sustituye libretas y notas sueltas por un expediente digital por cliente, una agenda sin empalmes y el seguimiento del vehículo desde que entra hasta que se entrega.</p>
+
+      <div class="login-feats">
+        <div class="login-feat"><span data-icon="agenda"></span>
+          <span>Agenda con validación de traslapes en tiempo real.</span></div>
+        <div class="login-feat"><span data-icon="taller"></span>
+          <span>Monitor de estatus: recibido, diagnóstico, reparación, terminado y entregado.</span></div>
+        <div class="login-feat"><span data-icon="alertas"></span>
+          <span>Alertas semestrales de mantenimiento preventivo por unidad.</span></div>
+        <div class="login-feat"><span data-icon="ordenes"></span>
+          <span>Comprobante de entrega con desglose de refacciones y mano de obra.</span></div>
+      </div>
+    </div>
+
+    <div class="dim" style="font-size:11.5px;position:relative;z-index:1">
+      Proyecto Integrador 1 · FIME, UANL · Equipo #10 · Prototipo de interfaz
+    </div>
+  </aside>
+
+  <section class="login-panel">
+    <div class="login-card">
+      <h1>Iniciar sesión</h1>
+      <p>Acceso exclusivo del administrador del taller.</p>
+
+      <div class="stack" style="gap:16px">
+        <div class="field">
+          <label>Usuario</label>
+          <input class="input" value="administrador" autocomplete="username">
+        </div>
+        <div class="field">
+          <label>Contraseña</label>
+          <input class="input" type="password" value="demostracion" autocomplete="current-password">
+        </div>
+        <div class="row-between">
+          <label class="check"><input type="checkbox" checked> Mantener sesión iniciada</label>
+          <a href="#" class="dim" style="font-size:12.5px" data-demo="Recuperación de contraseña (demostración).">¿Olvidó su contraseña?</a>
+        </div>
+        <a class="btn btn-primary" href="index.html" style="height:44px">Entrar al sistema</a>
+      </div>
+
+      <div class="alert alert-info mt-24">
+        <span data-icon="info"></span>
+        <div>
+          <div class="a-title">Prototipo sin autenticación</div>
+          Las credenciales son ilustrativas; el botón lleva directamente al tablero operativo.
+        </div>
+      </div>
+
+      <p class="dim tcenter" style="font-size:11.5px;margin-top:26px">
+        VMotors v0.9 · Un solo nivel de usuario (Administrador)
+      </p>
+    </div>
+  </section>
+
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

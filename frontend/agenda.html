@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agenda de citas · VMotors</title>
+<link rel="icon" href="assets/img/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body data-page="agenda" data-title="Agenda de citas" data-crumb="Operación diaria · Formulario E-01">
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <div class="main">
+    <header id="topbar"></header>
+    <main class="content">
+
+      <div class="page-head">
+        <div>
+          <h2>Semana del 7 al 12 de septiembre</h2>
+          <p>Cada bloque representa una bahía comprometida. El sistema impide registrar dos servicios activos en el mismo par de fecha y hora de inicio.</p>
+        </div>
+        <div class="page-actions">
+          <div class="seg">
+            <button data-demo="Vista de día (demostración).">Día</button>
+            <button class="is-active">Semana</button>
+            <button data-demo="Vista de mes (demostración).">Mes</button>
+          </div>
+          <button class="btn btn-icon" data-demo="Semana anterior (demostración).">‹</button>
+          <button class="btn btn-icon" data-demo="Semana siguiente (demostración).">›</button>
+          <button class="btn btn-primary" data-modal-open="modal-cita">Nueva cita</button>
+        </div>
+      </div>
+
+      <div class="grid g-main" style="align-items:start">
+        <!-- ===================== CALENDARIO ===================== -->
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Ocupación de bahías</h3>
+              <div class="sub">Horario laboral de 08:00 a 18:00 · lunes a sábado</div>
+            </div>
+            <div class="row" style="font-size:11.5px;color:var(--ink-3)">
+              <span class="row" style="gap:6px"><span class="kb-swatch" style="background:var(--st-recibido)"></span>Agendada</span>
+              <span class="row" style="gap:6px"><span class="kb-swatch" style="background:var(--st-terminado)"></span>Atendida</span>
+              <span class="row" style="gap:6px"><span class="kb-swatch" style="background:var(--critical)"></span>Cancelada</span>
+            </div>
+          </div>
+          <div class="card-body tight">
+            <div class="cal" id="cal"></div>
+          </div>
+          <div class="card-foot">
+            <span>Bloques ocupados esta semana</span>
+            <strong class="num" id="ocupacion">0</strong>
+          </div>
+        </article>
+
+        <!-- ===================== PANEL E-01 ===================== -->
+        <aside class="stack" style="position:sticky;top:90px">
+          <article class="card">
+            <div class="card-head">
+              <div><h3>Registrar cita</h3><div class="sub">Formulario E-01</div></div>
+            </div>
+            <div class="card-body">
+              <div class="stack" style="gap:16px">
+                <div class="field">
+                  <label>Vehículo <span class="req">*</span></label>
+                  <select class="select" id="sel-vehiculo"></select>
+                  <span class="hint">Buscador por placa o nombre del propietario.</span>
+                </div>
+                <div class="field">
+                  <label>Fecha de cita <span class="req">*</span></label>
+                  <input class="input" type="date" id="in-fecha" value="2026-09-11" min="2026-09-10">
+                  <span class="hint">No se admiten fechas anteriores al día de hoy.</span>
+                </div>
+                <div class="field">
+                  <label>Bloque horario <span class="req">*</span></label>
+                  <div class="slots" id="slots"></div>
+                </div>
+                <div id="aviso-slot"></div>
+                <div class="field">
+                  <label>Motivo / falla reportada <span class="req">*</span></label>
+                  <textarea class="textarea" style="min-height:88px" placeholder="Describa el servicio solicitado o la falla que reporta el cliente"></textarea>
+                </div>
+              </div>
+            </div>
+            <div class="card-foot" style="justify-content:flex-end;gap:9px">
+              <button class="btn" data-demo="Captura cancelada (demostración).">Cancelar</button>
+              <button class="btn btn-primary" id="btn-guardar" data-demo="Cita registrada (demostración).">Confirmar cita</button>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-head"><div><h3>Próximas citas</h3><div class="sub">Siguientes 5 turnos confirmados</div></div></div>
+            <div class="list" id="proximas"></div>
+          </article>
+        </aside>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Modal de detalle de cita -->
+<div class="modal-backdrop" id="modal-cita">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h3 id="mc-titulo">Detalle de la cita</h3>
+        <div class="sub dim" id="mc-sub"></div>
+      </div>
+      <button class="btn btn-ghost btn-icon" data-modal-close><span data-icon="cerrar"></span></button>
+    </div>
+    <div class="modal-body" id="mc-body"></div>
+    <div class="modal-foot">
+      <button class="btn" data-modal-close>Cerrar</button>
+      <button class="btn" data-demo="Cita reprogramada (demostración).">Reprogramar</button>
+      <a class="btn btn-primary" href="orden-detalle.html">Abrir orden de servicio</a>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+const DIAS_SEMANA = [
+  { iso: "2026-09-07", nombre: "Lun" }, { iso: "2026-09-08", nombre: "Mar" },
+  { iso: "2026-09-09", nombre: "Mié" }, { iso: "2026-09-10", nombre: "Jue" },
+  { iso: "2026-09-11", nombre: "Vie" }, { iso: "2026-09-12", nombre: "Sáb" }
+];
+const HORAS = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00"];
+
+const COLOR_CITA = {
+  "Agendada":  { linea: "var(--st-recibido)",  fondo: "#eaf2fd" },
+  "Atendida":  { linea: "var(--st-terminado)", fondo: "#e8f6e8" },
+  "Cancelada": { linea: "var(--critical)",     fondo: "#fceded" }
+};
+
+function initPagina() {
+  pintarCalendario();
+  pintarPanel();
+  pintarProximas();
+}
+
+/* ------------------------- Calendario semanal ------------------------- */
+function pintarCalendario() {
+  const cal = document.getElementById("cal");
+  const partes = [];
+  let ocupados = 0;
+
+  /* Encabezados */
+  partes.push(`<div class="cal-cell cal-head" style="grid-column:1;grid-row:1"></div>`);
+  DIAS_SEMANA.forEach((d, i) => {
+    const hoy = d.iso === VM.HOY;
+    partes.push(`<div class="cal-cell cal-head ${hoy ? "is-today" : ""} ${i === 5 ? "is-last-col" : ""}"
+        style="grid-column:${i + 2};grid-row:1">
+        <div class="d-name">${d.nombre}</div>
+        <div class="d-num">${Number(d.iso.slice(8))}</div>
+      </div>`);
+  });
+
+  /* Celdas por hora */
+  HORAS.forEach((h, r) => {
+    const fila = r + 2;
+    const ultimaFila = r === HORAS.length - 1;
+    partes.push(`<div class="cal-cell cal-hour ${ultimaFila ? "is-last-row" : ""}" style="grid-column:1;grid-row:${fila}">${h}</div>`);
+
+    DIAS_SEMANA.forEach((d, c) => {
+      const col = c + 2;
+      const clases = `${c === 5 ? "is-last-col" : ""} ${ultimaFila ? "is-last-row" : ""}`;
+
+      const inicia = VM.citas.find(x => x.fecha === d.iso && x.hora_inicio === h);
+      const cubre  = VM.citas.find(x => x.fecha === d.iso && x.hora_inicio < h && x.hora_fin > h);
+      if (cubre) return;                       /* la celda la ocupa un evento que empezó antes */
+
+      if (inicia) {
+        ocupados++;
+        const v  = VM.vehiculo(inicia.id_vehiculo);
+        const cl = VM.cliente(v.id_cliente);
+        const dur = Math.max(1, parseInt(inicia.hora_fin) - parseInt(inicia.hora_inicio));
+        const col_ = COLOR_CITA[inicia.estatus_cita];
+        partes.push(`<div class="cal-cell ${clases}" style="grid-column:${col};grid-row:${fila} / span ${dur}">
+          <div class="cal-event ${inicia.estatus_cita === "Cancelada" ? "is-cancel" : ""}"
+               style="--ev:${col_.linea};--ev-bg:${col_.fondo}"
+               data-cita="${inicia.id_cita}" role="button" tabindex="0">
+            <div class="ev-title">${v.marca} ${v.modelo}</div>
+            <div class="ev-sub">${v.placas} · ${VM.nombreCliente(cl).split(" ")[0]}</div>
+            <div class="ev-sub">${inicia.hora_inicio}–${inicia.hora_fin}</div>
+          </div>
+        </div>`);
+      } else {
+        partes.push(`<div class="cal-cell cal-slot is-free ${clases}" style="grid-column:${col};grid-row:${fila}"
+             data-demo="Bloque libre: se abriría el formulario E-01 (demostración)."></div>`);
+      }
+    });
+  });
+
+  cal.innerHTML = partes.join("");
+  cal.style.gridTemplateRows = `auto repeat(${HORAS.length}, minmax(60px, auto))`;
+  document.getElementById("ocupacion").textContent = ocupados;
+
+  cal.addEventListener("click", (e) => {
+    const ev = e.target.closest("[data-cita]");
+    if (ev) abrirDetalle(+ev.dataset.cita);
+  });
+}
+
+/* ------------------------- Detalle en modal ------------------------- */
+function abrirDetalle(idCita) {
+  const c  = VM.cita(idCita);
+  const v  = VM.vehiculo(c.id_vehiculo);
+  const cl = VM.cliente(v.id_cliente);
+  const o  = VM.ordenDeCita(idCita);
+
+  document.getElementById("mc-titulo").textContent = `${v.marca} ${v.modelo} ${v.anio}`;
+  document.getElementById("mc-sub").innerHTML = `Cita #${c.id_cita} · ${fmt.fecha(c.fecha)} · ${c.hora_inicio}–${c.hora_fin}`;
+  document.getElementById("mc-body").innerHTML = `
+    <div class="spec-grid" style="margin-bottom:18px">
+      <div class="spec"><div class="s-k">Placas</div><div class="s-v mono">${v.placas}</div></div>
+      <div class="spec"><div class="s-k">Estatus cita</div><div class="s-v">${pillCita(c.estatus_cita)}</div></div>
+      <div class="spec"><div class="s-k">Orden</div><div class="s-v folio">${o ? o.folio : "Sin generar"}</div></div>
+      <div class="spec"><div class="s-k">Etapa en taller</div><div class="s-v">${o ? pillOrden(o.estatus) : "—"}</div></div>
+    </div>
+    <dl class="dl">
+      <dt>Propietario</dt><dd>${VM.nombreCliente(cl)}</dd>
+      <dt>Teléfono</dt><dd class="mono">${cl.telefono}</dd>
+      <dt>Correo</dt><dd>${cl.correo || "No registrado"}</dd>
+      <dt>Motivo</dt><dd>${c.motivo_ingreso}</dd>
+    </dl>`;
+  document.getElementById("modal-cita").classList.add("is-open");
+}
+
+/* ------------------------- Panel E-01 ------------------------- */
+function pintarPanel() {
+  const sel = document.getElementById("sel-vehiculo");
+  sel.innerHTML = VM.vehiculos.map(v => {
+    const cl = VM.cliente(v.id_cliente);
+    return `<option value="${v.id_vehiculo}">${v.placas} — ${v.marca} ${v.modelo} (${VM.nombreCliente(cl)})</option>`;
+  }).join("");
+
+  const fecha = document.getElementById("in-fecha");
+  fecha.addEventListener("change", pintarSlots);
+  pintarSlots();
+}
+
+function pintarSlots() {
+  const fecha = document.getElementById("in-fecha").value;
+  const cont  = document.getElementById("slots");
+  const ocupadas = VM.citas
+    .filter(c => c.fecha === fecha && c.estatus_cita !== "Cancelada")
+    .map(c => c.hora_inicio);
+
+  cont.innerHTML = VM.BLOQUES_HORARIOS.map(h =>
+    `<button type="button" class="slot ${ocupadas.includes(h) ? "is-taken" : ""}" data-hora="${h}">${h}</button>`
+  ).join("");
+
+  cont.querySelectorAll(".slot").forEach(b => {
+    b.addEventListener("click", () => {
+      cont.querySelectorAll(".slot").forEach(x => x.classList.remove("is-selected"));
+      b.classList.add("is-selected");
+      evaluarTraslape(b.dataset.hora, b.classList.contains("is-taken"), fecha);
+    });
+  });
+  document.getElementById("aviso-slot").innerHTML = "";
+  document.getElementById("btn-guardar").classList.remove("is-disabled");
+}
+
+/* Regla del Proceso 2.0: (fecha, hora_inicio) ocupado => se bloquea el guardado */
+function evaluarTraslape(hora, ocupado, fecha) {
+  const aviso = document.getElementById("aviso-slot");
+  const btn   = document.getElementById("btn-guardar");
+
+  if (ocupado) {
+    const cita = VM.citas.find(c => c.fecha === fecha && c.hora_inicio === hora && c.estatus_cita !== "Cancelada");
+    const v = VM.vehiculo(cita.id_vehiculo);
+    aviso.innerHTML = `<div class="alert alert-danger">${icon("alerta")}
+      <div>
+        <div class="a-title">Traslape detectado</div>
+        El bloque de las ${hora} del ${fmt.fechaCorta(fecha)} ya está comprometido con
+        <strong>${v.marca} ${v.modelo} (${v.placas})</strong>. Seleccione otro horario para habilitar el guardado.
+      </div></div>`;
+    btn.classList.add("is-disabled");
+  } else {
+    aviso.innerHTML = `<div class="alert alert-good">${icon("check")}
+      <div>
+        <div class="a-title">Horario disponible</div>
+        No existen citas activas para las ${hora} del ${fmt.fechaCorta(fecha)}.
+      </div></div>`;
+    btn.classList.remove("is-disabled");
+  }
+}
+
+/* ------------------------- Proximas citas ------------------------- */
+function pintarProximas() {
+  const prox = VM.citas
+    .filter(c => c.fecha >= VM.HOY && c.estatus_cita === "Agendada")
+    .sort((a, b) => (a.fecha + a.hora_inicio).localeCompare(b.fecha + b.hora_inicio))
+    .slice(0, 5);
+
+  document.getElementById("proximas").innerHTML = prox.map(c => {
+    const v = VM.vehiculo(c.id_vehiculo);
+    const cl = VM.cliente(v.id_cliente);
+    return `<div class="list-item" data-cita="${c.id_cita}" style="cursor:pointer">
+      <div class="li-icon info">${icon("agenda")}</div>
+      <div class="li-main">
+        <div class="li-title">${v.marca} ${v.modelo} · <span class="mono">${v.placas}</span></div>
+        <div class="li-sub">${fmt.diaSemana(c.fecha)} ${fmt.fechaCorta(c.fecha)} · ${c.hora_inicio} · ${VM.nombreCliente(cl)}</div>
+      </div>
+      <span data-icon="chevron" style="color:var(--ink-3);width:16px;height:16px"></span>
+    </div>`;
+  }).join("");
+
+  initIcons(document.getElementById("proximas"));
+  document.getElementById("proximas").addEventListener("click", (e) => {
+    const it = e.target.closest("[data-cita]");
+    if (it) abrirDetalle(+it.dataset.cita);
+  });
+}
+</script>
+</body>
+</html>
