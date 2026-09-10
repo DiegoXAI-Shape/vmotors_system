@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orden OS-2026-0501 · VMotors</title>
+<link rel="icon" href="assets/img/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body data-page="ordenes" data-title="Orden de servicio" data-crumb="Expedientes · Formulario E-02">
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <div class="main">
+    <header id="topbar"></header>
+    <main class="content">
+
+      <div class="page-head">
+        <div>
+          <div class="row" style="gap:12px;margin-bottom:5px">
+            <h2 id="titulo">Orden</h2>
+            <span id="pill-estatus"></span>
+          </div>
+          <p id="subtitulo"></p>
+        </div>
+        <div class="page-actions">
+          <a class="btn" href="ordenes.html">Volver al listado</a>
+          <a class="btn" href="comprobante.html"><span data-icon="imprimir"></span> Comprobante</a>
+          <button class="btn btn-primary" id="btn-guardar" data-demo="Cambios guardados en la orden (demostración).">Guardar cambios</button>
+        </div>
+      </div>
+
+      <div class="grid g-main" style="align-items:start">
+        <div class="stack">
+
+          <!-- ============ CONTROL DE ESTATUS ============ -->
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <h3>Estatus operativo</h3>
+                <div class="sub">El flujo avanza en un solo sentido; no se permiten saltos de etapa</div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="flow" id="flow"></div>
+              <div id="aviso-estatus" class="mt-16"></div>
+            </div>
+          </article>
+
+          <!-- ============ DIAGNOSTICO ============ -->
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <h3>Diagnóstico técnico</h3>
+                <div class="sub">Fallas encontradas, refacciones requeridas y solución aplicada</div>
+              </div>
+              <span class="dim" style="font-size:11.5px">Última edición: hoy 10:20</span>
+            </div>
+            <div class="card-body">
+              <div class="field">
+                <textarea class="textarea" id="txt-diag" style="min-height:130px"></textarea>
+                <span class="hint">Este texto se reproduce íntegro en el comprobante de entrega del cliente.</span>
+              </div>
+            </div>
+          </article>
+
+          <!-- ============ REFACCIONES ============ -->
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <h3>Refacciones y mano de obra</h3>
+                <div class="sub">Desglose que alimenta el costo total de la orden</div>
+              </div>
+              <button class="btn btn-sm" data-demo="Catálogo de refacciones (demostración).">Catálogo</button>
+            </div>
+            <div class="card-body tight">
+              <div class="table-wrap">
+                <table class="tbl">
+                  <thead>
+                    <tr>
+                      <th>Clave</th><th>Descripción</th><th>Categoría</th>
+                      <th class="tright">Cant.</th><th class="tright">P. unitario</th><th class="tright">Importe</th><th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-refacciones"></tbody>
+                </table>
+              </div>
+              <div class="line-add" data-demo="Alta de refacción en la orden (demostración).">
+                <span data-icon="mas"></span> Agregar refacción a la orden
+              </div>
+            </div>
+            <div class="card-foot" style="align-items:flex-start">
+              <div class="dim" style="max-width:44ch;font-size:12px">
+                La mano de obra se captura por separado; el costo total es la suma de ambos conceptos
+                y debe estar definido antes de marcar la unidad como entregada.
+              </div>
+              <div class="totals" style="width:280px">
+                <div class="t-row"><span>Refacciones</span><strong class="num" id="t-ref">$0.00</strong></div>
+                <div class="t-row">
+                  <span>Mano de obra</span>
+                  <input class="input num tright" id="in-mo" type="number" step="0.01" min="0"
+                         style="width:130px;height:32px;font-size:13px">
+                </div>
+                <div class="t-row grand"><span>Total</span><strong class="num" id="t-total">$0.00</strong></div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <!-- ============ COLUMNA LATERAL ============ -->
+        <aside class="stack">
+          <article class="card">
+            <div class="card-head"><div><h3>Ficha de la unidad</h3></div></div>
+            <div class="card-body">
+              <div class="row" style="gap:12px;margin-bottom:16px">
+                <div class="li-icon info" style="width:42px;height:42px;border-radius:11px">
+                  <span data-icon="vehiculos" style="width:20px;height:20px"></span>
+                </div>
+                <div>
+                  <div style="font-size:15px;font-weight:650" id="v-nombre"></div>
+                  <div class="dim" style="font-size:12px" id="v-sub"></div>
+                </div>
+              </div>
+              <div class="spec-grid" id="v-specs"></div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-head"><div><h3>Cliente</h3></div>
+              <a class="btn btn-sm" href="clientes.html">Ver expediente</a>
+            </div>
+            <div class="card-body">
+              <div class="person" style="margin-bottom:14px">
+                <span class="av" id="c-ini"></span>
+                <div>
+                  <div class="cell-strong" id="c-nombre"></div>
+                  <div class="cell-sub" id="c-razon"></div>
+                </div>
+              </div>
+              <dl class="dl" id="c-datos"></dl>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <div><h3>Bitácora de estatus</h3><div class="sub">Trazabilidad de la orden</div></div>
+            </div>
+            <div class="card-body">
+              <div class="timeline" id="timeline"></div>
+            </div>
+          </article>
+        </aside>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+/* La orden mostrada por el prototipo */
+const ORDEN = VM.ordenExpandida(VM.orden(5001));
+let estatusActual = ORDEN.estatus;
+let manoObra = ORDEN.costo_mano_obra;
+
+function initPagina() {
+  const v = ORDEN.vehiculo, c = ORDEN.cliente;
+
+  document.getElementById("titulo").textContent = ORDEN.folio;
+  document.getElementById("subtitulo").innerHTML =
+    `${v.marca} ${v.modelo} ${v.anio} · <span class="mono">${v.placas}</span> · Ingreso ${fmt.fechaHora(ORDEN.fecha_ingreso)} ·
+     Promesa de entrega ${fmt.fechaHora(ORDEN.hora_prometida)}`;
+
+  document.getElementById("txt-diag").value = ORDEN.diagnostico || "";
+  document.getElementById("in-mo").value = manoObra.toFixed(2);
+
+  /* Ficha de la unidad */
+  document.getElementById("v-nombre").textContent = `${v.marca} ${v.modelo}`;
+  document.getElementById("v-sub").textContent = `${v.anio} · ${v.color} · ${v.transmision}`;
+  document.getElementById("v-specs").innerHTML = `
+    <div class="spec"><div class="s-k">Placas</div><div class="s-v mono">${v.placas}</div></div>
+    <div class="spec"><div class="s-k">Motor</div><div class="s-v">${v.motor}</div></div>
+    <div class="spec"><div class="s-k">Kilometraje</div><div class="s-v num">${fmt.int(ORDEN.kilometraje)}</div></div>
+    <div class="spec"><div class="s-k">Combustible</div><div class="s-v num">${fmt.combustible(ORDEN.nivel_combustible)}</div></div>`;
+
+  /* Cliente */
+  document.getElementById("c-ini").textContent = iniciales(VM.nombreCliente(c));
+  document.getElementById("c-nombre").textContent = VM.nombreCliente(c);
+  document.getElementById("c-razon").textContent = c.razon_social || "Persona física";
+  document.getElementById("c-datos").innerHTML = `
+    <dt>Teléfono</dt><dd class="mono">${c.telefono}</dd>
+    <dt>Correo</dt><dd>${c.correo || "—"}</dd>
+    <dt>R.F.C.</dt><dd class="mono">${c.rfc || "—"}</dd>
+    <dt>Forma de pago</dt><dd>${ORDEN.forma_pago}</dd>
+    <dt>Motivo</dt><dd>${ORDEN.cita.motivo_ingreso}</dd>`;
+
+  pintarFlujo();
+  pintarRefacciones();
+  pintarTimeline();
+
+  document.getElementById("in-mo").addEventListener("input", (e) => {
+    manoObra = parseFloat(e.target.value || 0);
+    pintarTotales();
+    validarEstatus();
+  });
+}
+
+/* ------------------------ Flujo de estatus (Modulo 3.2) ------------------------ */
+function pintarFlujo() {
+  const idxActual = VM.ESTATUS_ORDEN.findIndex(e => e.key === estatusActual);
+  document.getElementById("flow").innerHTML = VM.ESTATUS_ORDEN.map((e, i) => `
+    <button class="flow-step ${i < idxActual ? "is-done" : ""} ${i === idxActual ? "is-current" : ""} ${i > idxActual + 1 ? "is-blocked" : ""}"
+            style="--fs-color:${e.color}" data-estatus="${e.key}">
+      <div class="fs-n">ETAPA ${i + 1}</div>
+      <div class="fs-l">${e.label}</div>
+    </button>`).join("");
+
+  document.getElementById("pill-estatus").innerHTML = pillOrden(estatusActual);
+
+  document.querySelectorAll(".flow-step").forEach(b => {
+    b.addEventListener("click", () => intentarCambio(b.dataset.estatus));
+  });
+  validarEstatus();
+}
+
+const etiqueta = (key) => (VM.ESTATUS_ORDEN.find(e => e.key === key) || {}).label || key;
+
+function intentarCambio(destino) {
+  const iAct = VM.ESTATUS_ORDEN.findIndex(e => e.key === estatusActual);
+  const iDes = VM.ESTATUS_ORDEN.findIndex(e => e.key === destino);
+
+  if (iDes > iAct + 1) {
+    avisar("danger", "Transición inválida",
+      `No es posible saltar de <strong>${etiqueta(estatusActual)}</strong> a <strong>${etiqueta(destino)}</strong>.
+       El flujo debe avanzar etapa por etapa.`);
+    return;
+  }
+  if (destino === "Entregado" && total() <= 0) {
+    avisar("danger", "Costo total sin capturar",
+      "La orden no puede marcarse como <strong>Entregado</strong> mientras el costo total sea cero. Capture la mano de obra o las refacciones aplicadas.");
+    return;
+  }
+  estatusActual = destino;
+  pintarFlujo();
+  toast(`Estatus actualizado a "${etiqueta(destino)}" (demostración).`, "ok");
+}
+
+function validarEstatus() {
+  const btn = document.getElementById("btn-guardar");
+  if (estatusActual === "Entregado" && total() <= 0) {
+    avisar("danger", "Costo total sin capturar", "Capture el importe antes de cerrar la orden.");
+    btn.classList.add("is-disabled");
+    return;
+  }
+  btn.classList.remove("is-disabled");
+  const siguiente = VM.ESTATUS_ORDEN[VM.ESTATUS_ORDEN.findIndex(e => e.key === estatusActual) + 1];
+  avisar("info", "Siguiente etapa disponible",
+    siguiente
+      ? `Al concluir los trabajos de <strong>${etiqueta(estatusActual)}</strong>, la orden puede avanzar a <strong>${siguiente.label}</strong>.`
+      : "La orden se encuentra cerrada; sólo admite consulta e impresión del comprobante.");
+}
+
+function avisar(tipo, titulo, texto) {
+  const iconos = { danger: "alerta", warn: "alerta", info: "info", good: "check" };
+  document.getElementById("aviso-estatus").innerHTML =
+    `<div class="alert alert-${tipo}">${icon(iconos[tipo])}
+      <div><div class="a-title">${titulo}</div>${texto}</div>
+     </div>`;
+}
+
+/* ------------------------ Refacciones y totales ------------------------ */
+function subtotalRefacciones() {
+  return ORDEN.detalle.reduce((s, d) => s + d.cantidad * d.precio_unitario, 0);
+}
+function total() { return subtotalRefacciones() + (manoObra || 0); }
+
+function pintarRefacciones() {
+  const tb = document.getElementById("tbody-refacciones");
+  tb.innerHTML = ORDEN.detalle.length ? ORDEN.detalle.map(d => {
+    const r = VM.refaccion(d.id_refaccion);
+    return `<tr>
+      <td class="mono">${r.clave}</td>
+      <td class="cell-strong">${r.descripcion}</td>
+      <td><span class="pill st-neutral pill-plain">${r.categoria}</span></td>
+      <td class="tright num">${d.cantidad}</td>
+      <td class="tright num">${fmt.money(d.precio_unitario)}</td>
+      <td class="tright num cell-strong">${fmt.money(d.cantidad * d.precio_unitario)}</td>
+      <td class="actions">
+        <button class="btn btn-ghost btn-sm" data-demo="Renglón eliminado (demostración).">Quitar</button>
+      </td>
+    </tr>`;
+  }).join("") : `<tr><td colspan="7" class="tcenter dim" style="padding:26px">Aún no se registran refacciones en esta orden.</td></tr>`;
+  pintarTotales();
+}
+
+function pintarTotales() {
+  document.getElementById("t-ref").textContent   = fmt.money(subtotalRefacciones());
+  document.getElementById("t-total").textContent = fmt.money(total());
+}
+
+/* ------------------------ Bitacora ------------------------ */
+function pintarTimeline() {
+  const ultimo = ORDEN.historial.length - 1;
+  document.getElementById("timeline").innerHTML = ORDEN.historial.map((h, i) => {
+    const e = VM.ESTATUS_ORDEN.find(x => x.key === h.estatus);
+    return `<div class="tl-item ${i === ultimo ? "is-current" : ""}" style="--tl-color:${e ? e.color : "var(--border-strong)"}">
+      <div class="tl-title">${e ? e.label : h.estatus}</div>
+      <div class="tl-time">${fmt.fechaHora(h.fecha)} · Administrador</div>
+      <div class="tl-note">${h.nota}</div>
+    </div>`;
+  }).join("");
+}
+</script>
+</body>
+</html>

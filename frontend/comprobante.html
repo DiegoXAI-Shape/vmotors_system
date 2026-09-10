@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comprobante de servicio · VMotors</title>
+<link rel="icon" href="assets/img/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body class="doc-shell">
+
+  <div class="doc-bar">
+    <a class="btn" href="orden-detalle.html">Volver a la orden</a>
+    <div class="row">
+      <span class="dim" style="font-size:12px">Formato F-02 · Comprobante y póliza de servicio</span>
+      <button class="btn" onclick="window.print()"><span data-icon="imprimir"></span> Imprimir</button>
+      <button class="btn btn-primary" data-demo="Comprobante enviado por correo (demostración).">Enviar al cliente</button>
+    </div>
+  </div>
+
+  <article class="sheet" id="hoja"></article>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+/* Se usa una orden ya entregada para mostrar el documento completo */
+const O = VM.ordenExpandida(VM.orden(5006));
+
+function initPagina() {
+  const v = O.vehiculo, c = O.cliente;
+  const subtotalRef = O.detalle.reduce((s, d) => s + d.cantidad * d.precio_unitario, 0);
+
+  document.getElementById("hoja").innerHTML = `
+    <header class="sheet-head">
+      <div>
+        <div class="row" style="gap:11px">
+          <div class="brand-mark" style="box-shadow:none">VM</div>
+          <div>
+            <div style="font-size:19px;font-weight:660;letter-spacing:1.4px">VMOTORS</div>
+            <div class="dim" style="font-size:11px;letter-spacing:.6px">TALLER AUTOMOTRIZ · SERVICIO MULTIMARCA</div>
+          </div>
+        </div>
+        <div class="dim" style="font-size:11.5px;margin-top:12px;line-height:1.6">
+          Av. Miguel Alemán 1450, Col. Del Prado<br>
+          San Nicolás de los Garza, Nuevo León · C.P. 66450<br>
+          Tel. (81) 8345 6600 · contacto@vmotors.mx
+        </div>
+      </div>
+      <div class="tright">
+        <div class="sheet-title">Comprobante de servicio</div>
+        <div class="sheet-folio">${O.folio}</div>
+        <div class="dim" style="font-size:11.5px;margin-top:10px;line-height:1.7">
+          <div><strong>Ingreso:</strong> ${fmt.fechaHora(O.fecha_ingreso)}</div>
+          <div><strong>Entrega:</strong> ${fmt.fechaHora(O.fecha_entrega)}</div>
+          <div><strong>Forma de pago:</strong> ${O.forma_pago}</div>
+        </div>
+      </div>
+    </header>
+
+    <section class="sheet-section">
+      <h4>Datos del cliente</h4>
+      <div class="grid g-2">
+        <dl class="dl">
+          <dt>Nombre</dt><dd>${VM.nombreCliente(c)}</dd>
+          <dt>Razón social</dt><dd>${c.razon_social || "—"}</dd>
+          <dt>R.F.C.</dt><dd class="mono">${c.rfc || "—"}</dd>
+        </dl>
+        <dl class="dl">
+          <dt>Teléfono</dt><dd class="mono">${c.telefono}</dd>
+          <dt>Correo</dt><dd>${c.correo || "—"}</dd>
+          <dt>Domicilio</dt><dd>${c.calle} ${c.numero}, Col. ${c.colonia}, ${c.municipio}, ${c.estado}. C.P. ${c.codigo_postal}</dd>
+        </dl>
+      </div>
+    </section>
+
+    <section class="sheet-section">
+      <h4>Ficha de la unidad</h4>
+      <div class="spec-grid">
+        <div class="spec"><div class="s-k">Placas</div><div class="s-v mono">${v.placas}</div></div>
+        <div class="spec"><div class="s-k">Marca y modelo</div><div class="s-v">${v.marca} ${v.modelo}</div></div>
+        <div class="spec"><div class="s-k">Año</div><div class="s-v num">${v.anio}</div></div>
+        <div class="spec"><div class="s-k">Color</div><div class="s-v">${v.color}</div></div>
+        <div class="spec"><div class="s-k">Transmisión</div><div class="s-v">${v.transmision}</div></div>
+        <div class="spec"><div class="s-k">Kilometraje</div><div class="s-v num">${fmt.int(O.kilometraje)} km</div></div>
+      </div>
+    </section>
+
+    <section class="sheet-section">
+      <h4>Motivo de ingreso</h4>
+      <p style="font-size:13px;line-height:1.7">${O.cita.motivo_ingreso}</p>
+    </section>
+
+    <section class="sheet-section">
+      <h4>Diagnóstico y reparaciones realizadas</h4>
+      <p style="font-size:13px;line-height:1.7">${O.diagnostico}</p>
+    </section>
+
+    <section class="sheet-section">
+      <h4>Refacciones instaladas</h4>
+      <table class="tbl" style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
+        <thead>
+          <tr><th>Clave</th><th>Descripción</th><th class="tright">Cant.</th><th class="tright">P. unitario</th><th class="tright">Importe</th></tr>
+        </thead>
+        <tbody>
+          ${O.detalle.map(d => {
+            const r = VM.refaccion(d.id_refaccion);
+            return `<tr>
+              <td class="mono">${r.clave}</td>
+              <td>${r.descripcion}</td>
+              <td class="tright num">${d.cantidad}</td>
+              <td class="tright num">${fmt.money(d.precio_unitario)}</td>
+              <td class="tright num">${fmt.money(d.cantidad * d.precio_unitario)}</td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="sheet-section">
+      <div class="totals">
+        <div class="t-row"><span>Refacciones</span><span class="num">${fmt.money(subtotalRef)}</span></div>
+        <div class="t-row"><span>Mano de obra</span><span class="num">${fmt.money(O.costo_mano_obra)}</span></div>
+        <div class="t-row grand"><span>Total a pagar</span><span class="num">${fmt.money(O.costo_total)}</span></div>
+      </div>
+      <div class="row" style="margin-top:14px;gap:8px">
+        <span class="dim" style="font-size:11.5px">Estatus de la orden:</span>
+        ${pillOrden(O.estatus)}
+      </div>
+    </section>
+
+    <section class="sheet-section">
+      <h4>Garantía y condiciones</h4>
+      <p class="dim" style="font-size:11.5px;line-height:1.7">
+        Los trabajos realizados cuentan con garantía de 30 días naturales o 3,000 km, lo que ocurra primero,
+        siempre que la falla corresponda al servicio descrito en este documento. La garantía no cubre daños
+        derivados del uso indebido de la unidad ni piezas suministradas por el cliente. El taller no se hace
+        responsable por objetos de valor dejados dentro del vehículo.
+      </p>
+    </section>
+
+    <div class="sign-row">
+      <div class="sign"><div class="line">Firma de conformidad del cliente<br><strong>${VM.nombreCliente(c)}</strong></div></div>
+      <div class="sign"><div class="line">Firma y sello del taller<br><strong>VMotors · Administración</strong></div></div>
+    </div>
+
+    <p class="tcenter dim" style="font-size:10.5px;margin-top:34px">
+      Documento generado por el sistema VMotors · ${O.folio} · Impreso el 10 de septiembre de 2026
+    </p>`;
+}
+</script>
+</body>
+</html>

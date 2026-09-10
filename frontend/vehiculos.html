@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vehículos · VMotors</title>
+<link rel="icon" href="assets/img/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body data-page="vehiculos" data-title="Padrón vehicular" data-crumb="Expedientes · Módulo 1.0">
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <div class="main">
+    <header id="topbar"></header>
+    <main class="content">
+
+      <div class="page-head">
+        <div>
+          <h2>Unidades registradas</h2>
+          <p>Cada matrícula es única en el sistema y conserva el historial mecánico completo de la unidad, sin importar cuántas visitas acumule.</p>
+        </div>
+        <div class="page-actions">
+          <div class="seg" id="vista">
+            <button class="is-active" data-vista="tarjetas">Tarjetas</button>
+            <button data-vista="tabla">Tabla</button>
+          </div>
+          <a class="btn btn-primary" href="recepcion.html">Registrar unidad</a>
+        </div>
+      </div>
+
+      <article class="card" style="margin-bottom:18px">
+        <div class="toolbar">
+          <div class="search" style="width:320px">
+            <span data-icon="buscar"></span>
+            <input type="search" id="q" placeholder="Placa, marca, modelo o propietario">
+          </div>
+          <div class="seg" id="filtro-marca">
+            <button class="is-active" data-marca="todas">Todas</button>
+            <button data-marca="Nissan">Nissan</button>
+            <button data-marca="Chevrolet">Chevrolet</button>
+            <button data-marca="Ford">Ford</button>
+            <button data-marca="Toyota">Toyota</button>
+          </div>
+          <div style="flex:1 1 auto"></div>
+          <span class="dim" id="conteo"></span>
+        </div>
+      </article>
+
+      <div class="veh-grid" id="grid-vehiculos"></div>
+
+      <article class="card" id="vista-tabla" hidden>
+        <div class="table-wrap">
+          <table class="tbl">
+            <thead>
+              <tr><th>Placas</th><th>Unidad</th><th>Año</th><th>Color</th><th>Transmisión</th><th>Motor</th><th>Propietario</th><th>Visitas</th></tr>
+            </thead>
+            <tbody id="tbody-vehiculos"></tbody>
+          </table>
+        </div>
+      </article>
+
+    </main>
+  </div>
+</div>
+
+<!-- Historial por placa -->
+<div class="modal-backdrop" id="modal-hist">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h3 id="mh-titulo">Historial de la unidad</h3>
+        <div class="sub dim" id="mh-sub"></div>
+      </div>
+      <button class="btn btn-ghost btn-icon" data-modal-close><span data-icon="cerrar"></span></button>
+    </div>
+    <div class="modal-body" id="mh-body"></div>
+    <div class="modal-foot">
+      <button class="btn" data-modal-close>Cerrar</button>
+      <a class="btn btn-primary" href="reportes.html">Reporte por placa</a>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+let filtroMarca = "todas";
+let consulta = "";
+
+function initPagina() {
+  pintar();
+
+  document.getElementById("q").addEventListener("input", (e) => {
+    consulta = e.target.value.trim().toLowerCase();
+    pintar();
+  });
+
+  document.getElementById("filtro-marca").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    filtroMarca = b.dataset.marca;
+    pintar();
+  });
+
+  document.getElementById("vista").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    const tarjetas = b.dataset.vista === "tarjetas";
+    document.getElementById("grid-vehiculos").hidden = !tarjetas;
+    document.getElementById("vista-tabla").hidden = tarjetas;
+  });
+
+  document.body.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-hist]");
+    if (b) abrirHistorial(+b.dataset.hist);
+  });
+}
+
+function visibles() {
+  return VM.vehiculos.filter(v => {
+    const cl = VM.cliente(v.id_cliente);
+    const texto = `${v.placas} ${v.marca} ${v.modelo} ${v.color} ${VM.nombreCliente(cl)}`.toLowerCase();
+    return (filtroMarca === "todas" || v.marca === filtroMarca) && (consulta === "" || texto.includes(consulta));
+  });
+}
+
+function pintar() {
+  const lista = visibles();
+  document.getElementById("conteo").textContent =
+    `${lista.length} de ${VM.vehiculos.length} unidades`;
+
+  document.getElementById("grid-vehiculos").innerHTML = lista.map(v => {
+    const cl = VM.cliente(v.id_cliente);
+    const citas = VM.citasDeVehiculo(v.id_vehiculo).sort((a, b) => b.fecha.localeCompare(a.fecha));
+    /* La ultima visita solo considera citas ya ocurridas y no canceladas */
+    const ultima = citas.find(c => c.fecha <= VM.HOY && c.estatus_cita !== "Cancelada");
+    const proxima = [...citas].reverse().find(c => c.fecha > VM.HOY && c.estatus_cita === "Agendada");
+    const activa = citas.find(c => VM.ordenDeCita(c.id_cita) && VM.ordenDeCita(c.id_cita).estatus !== "Entregado");
+    const orden = activa ? VM.ordenDeCita(activa.id_cita) : null;
+    return `<article class="veh-card">
+      <div class="veh-top">
+        <div>
+          <div class="veh-name">${v.marca} ${v.modelo}</div>
+          <div class="veh-sub">${VM.nombreCliente(cl)}</div>
+        </div>
+        <span class="plate">${v.placas}</span>
+      </div>
+      <div class="veh-body">
+        <div class="veh-specs">
+          <div class="veh-spec"><div class="k">Año</div><div class="v num">${v.anio}</div></div>
+          <div class="veh-spec"><div class="k">Color</div><div class="v">${v.color}</div></div>
+          <div class="veh-spec"><div class="k">Transmisión</div><div class="v">${v.transmision}</div></div>
+          <div class="veh-spec"><div class="k">Motor</div><div class="v">${v.motor}</div></div>
+        </div>
+        <div style="margin-top:14px">
+          ${orden ? pillOrden(orden.estatus) : pill("Fuera del taller", "st-neutral")}
+        </div>
+      </div>
+      <div class="veh-foot">
+        <span>${proxima && !ultima
+          ? `Próxima cita: <strong>${fmt.fechaCorta(proxima.fecha)}</strong>`
+          : `Última visita: <strong>${ultima ? fmt.fechaCorta(ultima.fecha) : "Sin visitas"}</strong>`}</span>
+        <button class="btn btn-sm" data-hist="${v.id_vehiculo}">Historial</button>
+      </div>
+    </article>`;
+  }).join("");
+
+  document.getElementById("tbody-vehiculos").innerHTML = lista.map(v => {
+    const cl = VM.cliente(v.id_cliente);
+    return `<tr>
+      <td><span class="plate">${v.placas}</span></td>
+      <td class="cell-strong">${v.marca} ${v.modelo}</td>
+      <td class="num">${v.anio}</td>
+      <td>${v.color}</td>
+      <td>${v.transmision}</td>
+      <td class="dim">${v.motor}</td>
+      <td>${VM.nombreCliente(cl)}</td>
+      <td class="num">${VM.citasDeVehiculo(v.id_vehiculo).length}</td>
+    </tr>`;
+  }).join("");
+}
+
+function abrirHistorial(id) {
+  const v = VM.vehiculo(id);
+  const cl = VM.cliente(v.id_cliente);
+  const citas = VM.citasDeVehiculo(id).sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const histo = VM.ordenes_historicas.filter(h => h.id_vehiculo === id);
+
+  document.getElementById("mh-titulo").textContent = `${v.marca} ${v.modelo} ${v.anio}`;
+  document.getElementById("mh-sub").innerHTML = `Placas ${v.placas} · ${VM.nombreCliente(cl)}`;
+
+  const filas = citas.map(c => {
+    const o = VM.ordenDeCita(c.id_cita);
+    const h = histo.find(x => x.fecha_entrega.slice(0, 10) === c.fecha);
+    const folio = o ? o.folio : (h ? h.folio : "—");
+    const estatus = o ? pillOrden(o.estatus) : (h ? pillOrden("Entregado") : pillCita(c.estatus_cita));
+    const costo = o ? o.costo_total : (h ? h.costo_total : 0);
+    return `<tr>
+      <td class="nowrap">${fmt.fechaCorta(c.fecha)}</td>
+      <td class="folio">${folio}</td>
+      <td style="max-width:260px">${c.motivo_ingreso}</td>
+      <td>${estatus}</td>
+      <td class="tright num">${costo > 0 ? fmt.money(costo) : "—"}</td>
+    </tr>`;
+  }).join("");
+
+  const total = citas.reduce((s, c) => {
+    const o = VM.ordenDeCita(c.id_cita);
+    const h = histo.find(x => x.fecha_entrega.slice(0, 10) === c.fecha);
+    return s + (o ? o.costo_total : (h ? h.costo_total : 0));
+  }, 0);
+
+  document.getElementById("mh-body").innerHTML = `
+    <div class="spec-grid" style="margin-bottom:20px">
+      <div class="spec"><div class="s-k">Visitas</div><div class="s-v num">${citas.length}</div></div>
+      <div class="spec"><div class="s-k">Kilometraje registrado</div><div class="s-v num">${histo[0] ? fmt.int(histo[0].kilometraje) + " km" : "—"}</div></div>
+      <div class="spec"><div class="s-k">Transmisión</div><div class="s-v">${v.transmision}</div></div>
+      <div class="spec"><div class="s-k">Acumulado pagado</div><div class="s-v num">${fmt.money(total)}</div></div>
+    </div>
+    <div class="fieldset-title">Bitácora de servicios</div>
+    <div class="table-wrap" style="border:1px solid var(--border);border-radius:10px;margin-top:10px">
+      <table class="tbl">
+        <thead><tr><th>Fecha</th><th>Folio</th><th>Motivo</th><th>Estatus</th><th class="tright">Importe</th></tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+    </div>`;
+
+  document.getElementById("modal-hist").classList.add("is-open");
+}
+</script>
+</body>
+</html>

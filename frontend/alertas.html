@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alertas preventivas · VMotors</title>
+<link rel="icon" href="assets/img/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body data-page="alertas" data-title="Motor de alertas preventivas" data-crumb="Análisis · Ciclo semestral">
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <div class="main">
+    <header id="topbar"></header>
+    <main class="content">
+
+      <div class="page-head">
+        <div>
+          <h2>Unidades candidatas a mantenimiento</h2>
+          <p>Listado priorizado de clientes cuyos vehículos cumplieron seis meses o más desde su última visita registrada. Sirve de base para llamadas y recordatorios proactivos de afinación y frenos.</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn" data-demo="Listado exportado (demostración).">Exportar listado</button>
+          <button class="btn btn-primary" data-demo="Campaña de recordatorios enviada (demostración).">Enviar recordatorios</button>
+        </div>
+      </div>
+
+      <section class="grid g-4" style="margin-bottom:18px">
+        <article class="kpi" style="--kpi-accent: var(--critical)">
+          <div class="kpi-label">Prioridad alta</div><div class="kpi-value num" id="k-alta">0</div>
+          <div class="kpi-foot dim">Más de 7 meses sin visita</div>
+        </article>
+        <article class="kpi" style="--kpi-accent: var(--warning)">
+          <div class="kpi-label">Prioridad media</div><div class="kpi-value num" id="k-media">0</div>
+          <div class="kpi-foot dim">Entre 6 y 7 meses</div>
+        </article>
+        <article class="kpi" style="--kpi-accent: var(--series-1)">
+          <div class="kpi-label">Por cumplir el ciclo</div><div class="kpi-value num" id="k-baja">0</div>
+          <div class="kpi-foot dim">Se activarán en las próximas semanas</div>
+        </article>
+        <article class="kpi" style="--kpi-accent: var(--good)">
+          <div class="kpi-label">Contactables por correo</div><div class="kpi-value num" id="k-mail">0</div>
+          <div class="kpi-foot dim">Autorizaron recibir promociones</div>
+        </article>
+      </section>
+
+      <div class="grid g-main" style="align-items:start">
+        <article class="card">
+          <div class="toolbar">
+            <div class="search" style="width:280px">
+              <span data-icon="buscar"></span>
+              <input type="search" placeholder="Placa o propietario" data-search-target="#tabla-alertas">
+            </div>
+            <div class="seg" data-filter-target="#tabla-alertas tbody">
+              <button class="is-active" data-value="todos">Todas</button>
+              <button data-value="alta">Alta</button>
+              <button data-value="media">Media</button>
+              <button data-value="baja">Baja</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="tbl" id="tabla-alertas">
+              <thead>
+                <tr>
+                  <th>Prioridad</th><th>Unidad</th><th>Propietario</th>
+                  <th>Última visita</th><th>Antigüedad</th><th>Servicio sugerido</th><th></th>
+                </tr>
+              </thead>
+              <tbody id="tbody-alertas"></tbody>
+            </table>
+          </div>
+          <div class="card-foot">
+            <span>Regla aplicada: <strong>última visita &gt; 6 meses</strong> respecto al 10/09/2026</span>
+            <span class="dim">Actualizado automáticamente cada día</span>
+          </div>
+        </article>
+
+        <div class="stack">
+          <article class="card">
+            <div class="card-head">
+              <div><h3>Cómo se calcula</h3><div class="sub">Regla del motor de alertas</div></div>
+            </div>
+            <div class="card-body">
+              <div class="timeline">
+                <div class="tl-item" style="--tl-color:var(--series-1)">
+                  <div class="tl-title">1. Última visita por unidad</div>
+                  <div class="tl-note">Se toma la fecha de entrega más reciente de las órdenes ligadas a cada placa.</div>
+                </div>
+                <div class="tl-item" style="--tl-color:var(--series-1)">
+                  <div class="tl-title">2. Diferencia contra la fecha actual</div>
+                  <div class="tl-note">Si han transcurrido seis meses o más, la unidad entra al listado de candidatos.</div>
+                </div>
+                <div class="tl-item" style="--tl-color:var(--series-1)">
+                  <div class="tl-title">3. Priorización</div>
+                  <div class="tl-note">Se ordena de mayor a menor antigüedad y se sugiere el servicio típico según el kilometraje capturado al ingreso.</div>
+                </div>
+                <div class="tl-item is-current" style="--tl-color:var(--accent)">
+                  <div class="tl-title">4. Contacto</div>
+                  <div class="tl-note">El administrador llama o envía correo únicamente a los clientes que autorizaron recibir promociones.</div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-body">
+              <div class="alert alert-warn">
+                <span data-icon="alerta"></span>
+                <div>
+                  <div class="a-title">Precisión sujeta a la captura de odómetro</div>
+                  Si el kilometraje no se registra al recibir la unidad, la sugerencia de servicio pierde exactitud (issue ISS-04).
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+const PRIORIDAD = {
+  alta:  { cls: "st-critical", label: "Alta"  },
+  media: { cls: "st-warn",     label: "Media" },
+  baja:  { cls: "st-recibido", label: "Baja"  }
+};
+
+function initPagina() {
+  const cuenta = (p) => VM.alertas.filter(a => a.prioridad === p).length;
+  document.getElementById("k-alta").textContent  = cuenta("alta");
+  document.getElementById("k-media").textContent = cuenta("media");
+  document.getElementById("k-baja").textContent  = cuenta("baja");
+  document.getElementById("k-mail").textContent  = VM.alertas.filter(a => {
+    const v = VM.vehiculo(a.id_vehiculo);
+    return VM.cliente(v.id_cliente).acepta_promociones;
+  }).length;
+
+  document.getElementById("tbody-alertas").innerHTML = VM.alertas
+    .sort((a, b) => b.meses - a.meses)
+    .map(a => {
+      const v  = VM.vehiculo(a.id_vehiculo);
+      const cl = VM.cliente(v.id_cliente);
+      const p  = PRIORIDAD[a.prioridad];
+      return `<tr data-estatus="${a.prioridad}">
+        <td>${pill(p.label, p.cls)}</td>
+        <td>
+          <div class="cell-strong nowrap">${v.marca} ${v.modelo}</div>
+          <div class="cell-sub"><span class="plate">${v.placas}</span> · ${v.anio}</div>
+        </td>
+        <td>
+          <div class="nowrap">${VM.nombreCliente(cl)}</div>
+          <div class="cell-sub mono">${cl.telefono}</div>
+        </td>
+        <td class="nowrap">${fmt.fecha(a.ultima_visita)}</td>
+        <td class="num nowrap cell-strong">${a.meses.toFixed(1)} meses</td>
+        <td>${a.servicio_sugerido}</td>
+        <td class="actions">
+          ${cl.correo && cl.acepta_promociones
+            ? `<button class="btn btn-sm" data-demo="Correo de recordatorio enviado (demostración).">Enviar correo</button>`
+            : `<button class="btn btn-sm" data-demo="Registro de llamada (demostración).">Llamar</button>`}
+        </td>
+      </tr>`;
+    }).join("");
+}
+</script>
+</body>
+</html>
