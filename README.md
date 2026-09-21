@@ -2,28 +2,49 @@
 
 Proyecto Integrador 1 — FIME, UANL · Grupo 002 · Equipo #10
 
-Este repositorio contiene **dos entregables independientes** construidos a
-partir de los requerimientos de las fases III (Diseño del sistema) y IV
-(Proceso del sistema):
+El sistema tiene tres partes:
 
-| Carpeta | Qué es | Qué **no** es |
-|---|---|---|
-| `frontend/` | Prototipo visual: pantallas HTML/CSS/JS estáticas con datos de ejemplo | No tiene backend, autenticación ni conexión a base de datos |
-| `database/` | Script de Python que crea el esquema PostgreSQL y lo llena con Faker | No sirve a la interfaz; prepara el terreno para un backend futuro |
+| Carpeta | Qué es |
+|---|---|
+| `frontend/` | Interfaz: pantallas HTML/CSS/JS (sin frameworks) |
+| `backend/` | API en FastAPI que lee/escribe la base de datos y sirve la interfaz |
+| `database/` | Script de Python que crea el esquema (SQLite) y lo llena con datos ficticios (Faker) |
 
-Los dos entregables están deliberadamente separados: la interfaz muestra cómo
-se vería el sistema y el script define cómo estarán organizados los datos
-cuando exista un backend que los una.
+El backend sirve la carpeta `frontend/` directamente, así que **todo corre
+en un solo proceso y un solo puerto**: no hace falta levantar dos servidores
+por separado.
+
+## Arranque rápido (un solo comando)
+
+```powershell
+.\scripts\iniciar.ps1
+```
+
+Este script:
+
+1. Crea un entorno virtual (`.venv`) e instala las dependencias si hace falta.
+2. Genera `database/vmotors.db` con datos ficticios la primera vez que corre.
+3. Levanta el backend en `http://127.0.0.1:8000`.
+4. Abre un túnel público con `cloudflared` (se instala con
+   `winget install --id Cloudflare.cloudflared -e` si no lo tiene) e imprime
+   una URL `https://xxxxx.trycloudflare.com` que puede compartir con el
+   equipo para que revisen el sistema sin instalar nada en su máquina.
+
+Cerrar la ventana (o `Ctrl+C`) apaga el túnel y el backend. Usuario de acceso
+por omisión: **administrador / vmotors2026** (cámbielo en `backend/.env`
+antes de compartir el enlace si le preocupa la seguridad — ver
+`backend/.env.example`).
 
 ---
 
-## 1. Prototipo de interfaz (`frontend/`)
+## 1. Interfaz (`frontend/`)
 
-No requiere instalación ni servidor. Abra `frontend/login.html` (o directamente
-`frontend/index.html`) con doble clic en cualquier navegador moderno.
-
-> Si prefiere servirlo por HTTP:
-> `cd frontend && python -m http.server 8000` y visite <http://localhost:8000>.
+Ya no es un prototipo aislado: cada pantalla pide sus datos al backend
+(`/api/...`) y requiere haber iniciado sesión en `login.html`. Ábrala a
+través del backend (`.\scripts\iniciar.ps1`, o `uvicorn app.main:app` desde
+`backend/` y luego `http://127.0.0.1:8000`) — abrir los `.html` con doble
+clic ya no funciona, porque las páginas necesitan el servidor para traer la
+información.
 
 ### Pantallas
 
@@ -49,54 +70,113 @@ frontend/
 ├── *.html                    Una pantalla por archivo
 └── assets/
     ├── css/styles.css        Sistema de diseño completo (tokens, componentes)
-    ├── js/data.js            Datos de ejemplo con la forma exacta del esquema
+    ├── js/data.js            Carga los datos reales desde /api/* y llena VM
     ├── js/app.js             Marco de la aplicación, formateadores y gráficas SVG
     └── img/favicon.svg
 ```
 
 * **Sin dependencias**: no usa frameworks ni librerías de gráficas. Las gráficas
   del tablero son SVG generado a mano en `app.js`.
-* **Datos de ejemplo**: `data.js` expone arreglos (`VM.clientes`, `VM.vehiculos`,
-  `VM.citas`, `VM.ordenes`…) cuyos campos coinciden con las columnas reales de
-  la base de datos, de modo que cambiar a un backend consista en sustituir esos
-  arreglos por la respuesta de una API.
-* **Acciones simuladas**: los botones que representarían una escritura muestran
-  un aviso de demostración. Sí funcionan de forma local, porque son
-  comportamiento de interfaz, el paso a paso del formulario de recepción, el
-  arrastre de tarjetas en el Kanban, los filtros y buscadores de las tablas, la
-  detección visual de traslapes en la agenda y la validación del flujo de
-  estatus en la orden de servicio.
+* **Datos reales**: `data.js` ya no trae arreglos hardcodeados; al cargar la
+  página pide `/api/clientes`, `/api/vehiculos`, `/api/ordenes`, etc. y llena
+  el objeto `VM` con la respuesta, con la misma forma que antes tenía el
+  mockup. El resto del código de cada pantalla no tuvo que cambiar.
+* **Lectura y escritura reales**: recepción de una unidad (alta de cliente,
+  vehículo, cita y orden en un solo paso, reutilizando el expediente si el
+  teléfono o la placa ya existen), agendar una cita con validación de
+  traslapes, mover una tarjeta del Kanban, avanzar el estatus de una orden,
+  capturar diagnóstico/mano de obra y agregar o quitar refacciones — todo
+  queda guardado en `vmotors.db`. Lo que sigue siendo demostración es lo que
+  no tiene un concepto real detrás en el modelo de datos: exportar CSV,
+  imprimir, enviar correo, guardar un borrador o registrar una llamada.
+* **Validación de datos**: el backend valida formato de teléfono, RFC, CP,
+  placas, año del vehículo y coherencia de horarios (las mismas reglas que
+  antes vivían como `CHECK` en el esquema de PostgreSQL) y regresa mensajes
+  claros que el formulario muestra al usuario.
 
 ---
 
-## 2. Base de datos (`database/`)
+## 2. Backend (`backend/`)
+
+API en FastAPI que lee `database/vmotors.db` y sirve el `frontend/`. Sesión
+de un solo usuario administrador (sin roles ni tabla de usuarios, acorde al
+alcance actual del proyecto).
+
+```bash
+cd backend
+pip install -r requirements.txt
+cp .env.example .env          # usuario/contraseña y clave de sesión
+uvicorn app.main:app --reload
+```
+
+Con eso el sistema completo queda en `http://127.0.0.1:8000`. El script
+`scripts/iniciar.ps1` en la raíz hace estos pasos automáticamente y además
+levanta el túnel de `cloudflared` para compartirlo por internet.
+
+| Endpoint | Qué hace |
+|---|---|
+| `POST /api/auth/login`, `/logout`, `GET /me` | Sesión del administrador (con límite de 5 intentos fallidos cada 15 min) |
+| `GET /api/clientes`, `/vehiculos`, `/citas`, `/refacciones` | Catálogos completos |
+| `GET /api/clientes/buscar`, `/vehiculos/buscar` | Localiza un cliente por teléfono/RFC o un vehículo por placas (cliente recurrente) |
+| `POST /api/clientes`, `/vehiculos`, `/citas` | Altas sueltas, con validación de formato y de traslapes |
+| `POST /api/recepcion` | Formato F-01 completo: cliente + vehículo + cita + orden en una sola operación |
+| `GET /api/ordenes` | Órdenes vigentes (abiertas + entregadas en los últimos 30 días), con su desglose de refacciones e historial de estatus anidado |
+| `PATCH /api/ordenes/{id}` | Diagnóstico, mano de obra y cambio de estatus (valida que el flujo avance una sola etapa y que haya costo antes de "Entregado") |
+| `POST/DELETE /api/ordenes/{id}/refacciones/...` | Agregar o quitar refacciones de una orden, recalculando costos |
+| `GET /api/ordenes_historicas` | Ledger completo de órdenes ya entregadas (para reportes e historial por placa) |
+| `GET /api/alertas` | Unidades con 6+ meses sin visita |
+| `GET /api/dashboard` | Series para las gráficas del tablero y reportes |
+
+**Seguridad de la sesión**: cookie firmada con `SameSite=Lax` (un sitio
+externo no puede reenviarla en un POST/PATCH/DELETE de otro origen — esa es
+la defensa contra CSRF), sin CORS habilitado, límite de intentos de login, y
+un aviso en el arranque si `SECRET_KEY` sigue en su valor por omisión.
+
+---
+
+## 3. Base de datos (`database/`)
+
+Dos generadores comparten la misma lógica de datos ficticios
+(`generador.py`, con Faker en `es_MX`) y solo difieren en el motor:
 
 ```bash
 cd database
 pip install -r requirements.txt
+
+# SQLite (lo que usa el backend actual: un solo archivo, sin servidor)
+python seed_sqlite.py --reset --yes
+
+# PostgreSQL (variante para un futuro despliegue con servidor de base de datos)
 cp .env.example .env          # coloque aquí las credenciales de PostgreSQL
 createdb vmotors
 python seed_database.py --reset --yes
 ```
 
-Crea siete tablas en tercera forma normal, cinco vistas de consulta y alrededor
-de 3,300 registros ficticios coherentes entre sí.
-
-Las credenciales se leen de variables de entorno; **no hay contraseñas escritas
-en el código**. El detalle completo del modelo, las opciones del script y las
-consultas de comprobación están en [`database/README.md`](database/README.md).
+Crea siete tablas en tercera forma normal y alrededor de 3,300 registros
+ficticios coherentes entre sí (clientes, vehículos, citas, órdenes,
+refacciones y su historial de estatus). El detalle completo del modelo, las
+opciones del script y las consultas de comprobación están en
+[`database/README.md`](database/README.md) (escrito para la variante
+PostgreSQL; el esquema de SQLite es el mismo modelo, adaptado en
+`seed_sqlite.py`).
 
 ---
 
-## 3. Estado del proyecto
+## 4. Estado del proyecto
 
-Lo que existe hoy es un **prototipo visual** más un **generador de base de
-datos**. Falta, para tener un sistema funcional:
+Sistema funcional de un solo nivel de usuario: interfaz + backend + base de
+datos, con sesión real, datos en vivo en las 12 pantallas y las operaciones
+del día a día (recepción, agenda, Kanban, cierre de orden) escribiendo de
+verdad en la base de datos con las mismas reglas de negocio que estaban
+documentadas en el esquema original.
 
-1. Una capa de backend (por ejemplo Flask, FastAPI o Node) que exponga las
-   operaciones de alta, consulta y cambio de estatus.
-2. Autenticación real del administrador.
-3. Sustituir `frontend/assets/js/data.js` por llamadas a esa API.
+Pendiente, como siguientes etapas:
 
-El diseño actual está pensado para que esos tres pasos no obliguen a rehacer ni
-las pantallas ni el esquema.
+1. Paginación real en las tablas más largas (clientes, vehículos, alertas);
+   hoy se muestran completas porque el volumen de datos de la demo es
+   modesto.
+2. Cuando el taller lo requiera, sumar roles adicionales (mecánicos) sobre
+   la misma base — hoy es deliberadamente un solo nivel de acceso.
+3. Si el sistema deja de vivir en una laptop + túnel, mover el despliegue a
+   un servidor propio (el backend ya es un proceso WSGI/ASGI estándar, no
+   depende de `cloudflared` para funcionar).

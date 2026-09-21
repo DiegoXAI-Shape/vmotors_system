@@ -15,3 +15,7 @@ env/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Generados por el backend / la base de datos local
+*.log
+database/vmotors.db

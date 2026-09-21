@@ -94,7 +94,7 @@
           <div class="card-head">
             <div>
               <h3>Agenda de hoy</h3>
-              <div class="sub">Jueves 10 de septiembre · bloques de 08:00 a 18:00</div>
+              <div class="sub" id="sub-agenda-hoy">bloques de 08:00 a 18:00</div>
             </div>
             <a class="btn btn-sm" href="agenda.html">Ver agenda completa</a>
           </div>
@@ -147,6 +147,8 @@
 <script src="assets/js/app.js"></script>
 <script>
 function initPagina() {
+  document.getElementById("sub-agenda-hoy").textContent = `${fechaLarga(VM.HOY)} · bloques de 08:00 a 18:00`;
+
   /* ---- KPIs (calculados sobre los datos de ejemplo) ---- */
   const abiertas   = VM.ordenes.filter(o => o.estatus !== "Entregado");
   const enTaller   = abiertas.filter(o => o.estatus !== "Pendiente");
@@ -157,7 +159,8 @@ function initPagina() {
   document.getElementById("kpi-taller").textContent   = enTaller.length;
   document.getElementById("kpi-citas").textContent    = citasHoy.length;
   document.getElementById("kpi-listas").textContent   = listas.length;
-  document.getElementById("kpi-ingresos").textContent = fmt.money(74200, 0);
+  const mesActual = VM.ingresosMensuales[VM.ingresosMensuales.length - 1];
+  document.getElementById("kpi-ingresos").textContent = fmt.money(mesActual ? mesActual.valor : 0, 0);
   document.getElementById("kpi-taller-delta").innerHTML = icon("arriba") + "2";
   document.getElementById("kpi-citas-sub").textContent =
     `${citasHoy.length - canceladas} activas · ${canceladas} cancelada${canceladas === 1 ? "" : "s"}`;
@@ -211,7 +214,7 @@ function initPagina() {
         <td style="max-width:300px">${c.motivo_ingreso}</td>
         <td>${orden ? pillOrden(orden.estatus) : pillCita(c.estatus_cita)}</td>
         <td class="actions">
-          <a class="btn btn-sm" href="${orden ? "orden-detalle.html" : "agenda.html"}">Abrir</a>
+          <a class="btn btn-sm" href="${orden ? `orden-detalle.html?id=${orden.id_orden}` : "agenda.html"}">Abrir</a>
         </td>
       </tr>`;
     }).join("");

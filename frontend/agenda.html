@@ -19,7 +19,7 @@
 
       <div class="page-head">
         <div>
-          <h2>Semana del 7 al 12 de septiembre</h2>
+          <h2 id="titulo-semana">Semana</h2>
           <p>Cada bloque representa una bahía comprometida. El sistema impide registrar dos servicios activos en el mismo par de fecha y hora de inicio.</p>
         </div>
         <div class="page-actions">
@@ -72,7 +72,7 @@
                 </div>
                 <div class="field">
                   <label>Fecha de cita <span class="req">*</span></label>
-                  <input class="input" type="date" id="in-fecha" value="2026-09-11" min="2026-09-10">
+                  <input class="input" type="date" id="in-fecha">
                   <span class="hint">No se admiten fechas anteriores al día de hoy.</span>
                 </div>
                 <div class="field">
@@ -82,13 +82,13 @@
                 <div id="aviso-slot"></div>
                 <div class="field">
                   <label>Motivo / falla reportada <span class="req">*</span></label>
-                  <textarea class="textarea" style="min-height:88px" placeholder="Describa el servicio solicitado o la falla que reporta el cliente"></textarea>
+                  <textarea class="textarea" id="in-motivo" style="min-height:88px" placeholder="Describa el servicio solicitado o la falla que reporta el cliente"></textarea>
                 </div>
               </div>
             </div>
             <div class="card-foot" style="justify-content:flex-end;gap:9px">
               <button class="btn" data-demo="Captura cancelada (demostración).">Cancelar</button>
-              <button class="btn btn-primary" id="btn-guardar" data-demo="Cita registrada (demostración).">Confirmar cita</button>
+              <button class="btn btn-primary" id="btn-guardar">Confirmar cita</button>
             </div>
           </article>
 
@@ -125,12 +125,25 @@
 <script src="assets/js/data.js"></script>
 <script src="assets/js/app.js"></script>
 <script>
-const DIAS_SEMANA = [
-  { iso: "2026-09-07", nombre: "Lun" }, { iso: "2026-09-08", nombre: "Mar" },
-  { iso: "2026-09-09", nombre: "Mié" }, { iso: "2026-09-10", nombre: "Jue" },
-  { iso: "2026-09-11", nombre: "Vie" }, { iso: "2026-09-12", nombre: "Sáb" }
-];
+const NOMBRES_DIA = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 const HORAS = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00"];
+
+/* Semana laboral (lunes a sábado) que contiene a VM.HOY */
+function construirSemana() {
+  const hoy = new Date(VM.HOY + "T12:00:00");
+  const diaSemana = hoy.getDay();                      // 0=domingo .. 6=sábado
+  const offsetLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+  const lunes = new Date(hoy);
+  lunes.setDate(hoy.getDate() + offsetLunes);
+
+  return NOMBRES_DIA.map((nombre, i) => {
+    const d = new Date(lunes);
+    d.setDate(lunes.getDate() + i);
+    const iso = `${d.getFullYear()}-${_pad(d.getMonth() + 1)}-${_pad(d.getDate())}`;
+    return { iso, nombre };
+  });
+}
+const DIAS_SEMANA = construirSemana();
 
 const COLOR_CITA = {
   "Agendada":  { linea: "var(--st-recibido)",  fondo: "#eaf2fd" },
@@ -139,9 +152,59 @@ const COLOR_CITA = {
 };
 
 function initPagina() {
+  const primero = DIAS_SEMANA[0], ultimo = DIAS_SEMANA[DIAS_SEMANA.length - 1];
+  document.getElementById("titulo-semana").textContent =
+    `Semana del ${fmt.fecha(primero.iso)} al ${fmt.fecha(ultimo.iso)}`;
+
+  const inFecha = document.getElementById("in-fecha");
+  inFecha.min = VM.HOY;
+  inFecha.value = VM.HOY;
+
   pintarCalendario();
   pintarPanel();
   pintarProximas();
+
+  document.getElementById("btn-guardar").addEventListener("click", confirmarCita);
+}
+
+/* ------------------------- Confirmar cita (POST real) ------------------------- */
+async function confirmarCita() {
+  const btn = document.getElementById("btn-guardar");
+  if (btn.classList.contains("is-disabled")) return;
+
+  const idVehiculo = Number(document.getElementById("sel-vehiculo").value);
+  const fecha = document.getElementById("in-fecha").value;
+  const slot = document.querySelector("#slots .slot.is-selected");
+  const motivo = document.getElementById("in-motivo").value.trim();
+  const aviso = document.getElementById("aviso-slot");
+
+  if (!slot) {
+    aviso.innerHTML = `<div class="alert alert-danger">${icon("alerta")}<div>Seleccione un bloque horario.</div></div>`;
+    return;
+  }
+  if (!motivo) {
+    aviso.innerHTML = `<div class="alert alert-danger">${icon("alerta")}<div>Describa el motivo de la cita.</div></div>`;
+    return;
+  }
+
+  btn.classList.add("is-disabled");
+  btn.textContent = "Guardando…";
+  try {
+    await vmApi("POST", "/api/citas", {
+      id_vehiculo: idVehiculo, fecha, hora_inicio: slot.dataset.hora, motivo_ingreso: motivo,
+    });
+    await vmCargarDatos();               // refresca VM.citas con la nueva cita
+    toast("Cita registrada correctamente.", "ok");
+    document.getElementById("in-motivo").value = "";
+    pintarCalendario();
+    pintarProximas();
+    pintarSlots();
+  } catch (err) {
+    aviso.innerHTML = `<div class="alert alert-danger">${icon("alerta")}<div><div class="a-title">No se pudo registrar la cita</div>${err.message}</div></div>`;
+  } finally {
+    btn.classList.remove("is-disabled");
+    btn.textContent = "Confirmar cita";
+  }
 }
 
 /* ------------------------- Calendario semanal ------------------------- */

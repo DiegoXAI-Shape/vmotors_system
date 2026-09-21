@@ -63,11 +63,11 @@
 
               <!-- ===================== PASO 1: CLIENTE ===================== -->
               <section class="step-panel is-current">
-                <div class="alert alert-info" style="margin-bottom:20px">
+                <div class="alert alert-info" style="margin-bottom:20px" id="aviso-cliente-recurrente">
                   <span data-icon="info"></span>
                   <div>
                     <div class="a-title">Cliente recurrente</div>
-                    Escriba el teléfono o el RFC para recuperar un expediente existente; los campos se llenarán automáticamente.
+                    Escriba el teléfono para recuperar un expediente existente; los campos se llenarán automáticamente.
                   </div>
                 </div>
 
@@ -75,24 +75,24 @@
                 <div class="field-grid fg-3" style="margin-bottom:22px">
                   <div class="field">
                     <label>Nombre(s) <span class="req">*</span></label>
-                    <input class="input" placeholder="María Fernanda" value="María Fernanda">
+                    <input class="input" id="rc-nombre" placeholder="María Fernanda">
                   </div>
                   <div class="field">
                     <label>Apellidos <span class="req">*</span></label>
-                    <input class="input" placeholder="Cantú Robles" value="Cantú Robles">
+                    <input class="input" id="rc-apellido" placeholder="Cantú Robles">
                   </div>
                   <div class="field">
                     <label>R.F.C.</label>
-                    <input class="input mono" placeholder="CARF900101AB1" maxlength="13">
+                    <input class="input mono" id="rc-rfc" placeholder="CARF900101AB1" maxlength="13">
                     <span class="hint">13 caracteres para persona física, 12 para moral.</span>
                   </div>
                   <div class="field span-2">
                     <label>Razón social</label>
-                    <input class="input" placeholder="Opcional · sólo para facturación a empresa">
+                    <input class="input" id="rc-razon" placeholder="Opcional · sólo para facturación a empresa">
                   </div>
                   <div class="field">
                     <label>Forma de pago prevista</label>
-                    <select class="select">
+                    <select class="select" id="rc-forma-pago">
                       <option>Efectivo</option><option>Tarjeta</option>
                       <option>Transferencia</option><option>Cheque</option>
                     </select>
@@ -103,20 +103,20 @@
                 <div class="field-grid fg-3" style="margin-bottom:22px">
                   <div class="field">
                     <label>Teléfono casa <span class="req">*</span></label>
-                    <input class="input" inputmode="numeric" placeholder="8123310098" value="8123310098">
+                    <input class="input" id="rc-telefono" inputmode="numeric" placeholder="8123310098">
                     <span class="hint">Sólo dígitos, mínimo 10.</span>
                   </div>
                   <div class="field">
                     <label>Teléfono oficina</label>
-                    <input class="input" inputmode="numeric" placeholder="8183456601">
+                    <input class="input" id="rc-tel-oficina" inputmode="numeric" placeholder="8183456601">
                   </div>
                   <div class="field">
                     <label>Correo electrónico</label>
-                    <input class="input" type="email" placeholder="cliente@correo.mx" value="mfcantu@outlook.com">
+                    <input class="input" id="rc-correo" type="email" placeholder="cliente@correo.mx">
                   </div>
                   <div class="field span-3">
                     <label class="check">
-                      <input type="checkbox" checked>
+                      <input type="checkbox" id="rc-promos" checked>
                       ¿Le agradaría recibir promociones y recordatorios de mantenimiento por correo?
                     </label>
                   </div>
@@ -126,27 +126,27 @@
                 <div class="field-grid fg-4">
                   <div class="field span-2">
                     <label>Calle</label>
-                    <input class="input" placeholder="Paseo de los Leones" value="Paseo de los Leones">
+                    <input class="input" id="rc-calle" placeholder="Paseo de los Leones">
                   </div>
                   <div class="field">
                     <label>Número</label>
-                    <input class="input" placeholder="3320" value="3320">
+                    <input class="input" id="rc-numero" placeholder="3320">
                   </div>
                   <div class="field">
                     <label>C.P.</label>
-                    <input class="input" inputmode="numeric" maxlength="5" placeholder="64610" value="64610">
+                    <input class="input" id="rc-cp" inputmode="numeric" maxlength="5" placeholder="64610">
                   </div>
                   <div class="field span-2">
                     <label>Colonia</label>
-                    <input class="input" placeholder="Cumbres 2do Sector" value="Cumbres 2do Sector">
+                    <input class="input" id="rc-colonia" placeholder="Cumbres 2do Sector">
                   </div>
                   <div class="field">
                     <label>Municipio</label>
-                    <input class="input" placeholder="Monterrey" value="Monterrey">
+                    <input class="input" id="rc-municipio" placeholder="Monterrey">
                   </div>
                   <div class="field">
                     <label>Estado</label>
-                    <select class="select">
+                    <select class="select" id="rc-estado">
                       <option selected>Nuevo León</option>
                       <option>Coahuila</option><option>Tamaulipas</option><option>Otro</option>
                     </select>
@@ -160,47 +160,47 @@
                 <div class="field-grid fg-3" style="margin-bottom:22px">
                   <div class="field">
                     <label>Placas <span class="req">*</span></label>
-                    <input class="input mono" placeholder="LKW-556-D" value="LKW-556-D" style="text-transform:uppercase">
+                    <input class="input mono" id="rv-placas" placeholder="LKW-556-D" style="text-transform:uppercase">
                     <span class="hint">Se almacena en mayúsculas y debe ser única.</span>
                   </div>
                   <div class="field">
                     <label>Marca <span class="req">*</span></label>
-                    <select class="select">
-                      <option selected>Mazda</option><option>Nissan</option><option>Toyota</option>
-                      <option>Chevrolet</option><option>Ford</option><option>Volkswagen</option>
-                      <option>Honda</option><option>Kia</option><option>Hyundai</option><option>Otra</option>
+                    <select class="select" id="rv-marca">
+                      <option>Nissan</option><option>Chevrolet</option><option>Ford</option><option>Toyota</option>
+                      <option>Volkswagen</option><option>Honda</option><option>Mazda</option><option>Kia</option>
+                      <option>Hyundai</option><option>Seat</option><option>Renault</option><option>Jeep</option><option>Otra</option>
                     </select>
                   </div>
                   <div class="field">
                     <label>Modelo / línea <span class="req">*</span></label>
-                    <input class="input" placeholder="CX-5" value="CX-5">
+                    <input class="input" id="rv-modelo" placeholder="CX-5">
                   </div>
                   <div class="field">
                     <label>Año <span class="req">*</span></label>
-                    <input class="input num" type="number" min="1980" max="2027" value="2021">
+                    <input class="input num" id="rv-anio" type="number" min="1980" max="2027" placeholder="2021">
                     <span class="hint">Entre 1980 y el año siguiente al actual.</span>
                   </div>
                   <div class="field">
                     <label>Color</label>
-                    <input class="input" placeholder="Azul" value="Azul">
+                    <input class="input" id="rv-color" placeholder="Azul">
                   </div>
                   <div class="field">
                     <label>Motor</label>
-                    <input class="input" placeholder="2.5L 4 cil." value="2.5L 4 cil.">
+                    <input class="input" id="rv-motor" placeholder="2.5L 4 cil.">
                   </div>
                 </div>
 
                 <div class="fieldset-title">Transmisión</div>
-                <div class="radio-cards" style="max-width:420px">
+                <div class="radio-cards" style="max-width:420px" id="rv-transmision">
                   <label class="radio-card">
-                    <input type="radio" name="trans" checked>
+                    <input type="radio" name="trans" value="Manual" checked>
                     <span>
                       <span class="rc-title">Manual</span>
                       <span class="rc-sub">Caja estándar</span>
                     </span>
                   </label>
                   <label class="radio-card">
-                    <input type="radio" name="trans">
+                    <input type="radio" name="trans" value="Automático">
                     <span>
                       <span class="rc-title">Automático</span>
                       <span class="rc-sub">Convertidor o CVT</span>
@@ -208,13 +208,7 @@
                   </label>
                 </div>
 
-                <div class="alert alert-warn mt-24">
-                  <span data-icon="alerta"></span>
-                  <div>
-                    <div class="a-title">Placa ya registrada</div>
-                    Si la matrícula existe en el padrón, el sistema vincula la visita al expediente actual en lugar de duplicar la unidad.
-                  </div>
-                </div>
+                <div id="aviso-placa"></div>
               </section>
 
               <!-- ===================== PASO 3: VISITA ===================== -->
@@ -223,34 +217,34 @@
                 <div class="field-grid fg-4" style="margin-bottom:22px">
                   <div class="field">
                     <label>Fecha de entrada <span class="req">*</span></label>
-                    <input class="input" type="date" value="2026-09-10">
+                    <input class="input" id="rvi-fecha" type="date">
                   </div>
                   <div class="field">
                     <label>Hora de entrada <span class="req">*</span></label>
-                    <input class="input" type="time" value="09:30">
+                    <input class="input" id="rvi-hora-entrada" type="time">
                   </div>
                   <div class="field">
                     <label>Hora prometida <span class="req">*</span></label>
-                    <input class="input" type="time" value="16:00">
+                    <input class="input" id="rvi-hora-prometida" type="time">
                   </div>
                   <div class="field">
                     <label>Kilometraje <span class="req">*</span></label>
-                    <input class="input num" type="number" min="0" placeholder="38900" value="38900">
+                    <input class="input num" id="rvi-km" type="number" min="0" placeholder="38900">
                   </div>
                   <div class="field span-2">
                     <label>Nivel de combustible</label>
-                    <select class="select">
-                      <option>0/8 · Vacío</option><option>2/8</option>
-                      <option selected>4/8 · Medio</option><option>6/8</option><option>8/8 · Lleno</option>
+                    <select class="select" id="rvi-combustible">
+                      <option value="0">0/8 · Vacío</option><option value="2">2/8</option>
+                      <option value="4" selected>4/8 · Medio</option><option value="6">6/8</option><option value="8">8/8 · Lleno</option>
                     </select>
                   </div>
                   <div class="field span-2">
-                    <label>Bloque de atención</label>
-                    <select class="select">
-                      <option>08:00 - 10:00</option>
-                      <option selected>09:00 - 11:00</option>
-                      <option>10:00 - 13:00</option>
-                      <option>13:00 - 15:00</option>
+                    <label>Bloque de atención <span class="req">*</span></label>
+                    <select class="select" id="rvi-bloque">
+                      <option value="08:00-10:00">08:00 - 10:00</option>
+                      <option value="09:00-11:00" selected>09:00 - 11:00</option>
+                      <option value="10:00-13:00">10:00 - 13:00</option>
+                      <option value="13:00-15:00">13:00 - 15:00</option>
                     </select>
                   </div>
                 </div>
@@ -259,21 +253,11 @@
                 <div class="field-grid" style="margin-bottom:22px">
                   <div class="field">
                     <label>Motivo de ingreso <span class="req">*</span></label>
-                    <textarea class="textarea" placeholder="Describa la falla tal como la reporta el cliente">Ruido metálico al frenar. Solicita revisión de balatas y discos delanteros.</textarea>
+                    <textarea class="textarea" id="rvi-motivo" placeholder="Describa la falla tal como la reporta el cliente"></textarea>
                   </div>
                 </div>
 
-                <div class="fieldset-title">Inventario de pertenencias</div>
-                <div class="field-grid fg-4">
-                  <label class="check"><input type="checkbox" checked> Llanta de refacción</label>
-                  <label class="check"><input type="checkbox" checked> Gato y llave de cruz</label>
-                  <label class="check"><input type="checkbox"> Estéreo desmontable</label>
-                  <label class="check"><input type="checkbox" checked> Tapetes</label>
-                  <div class="field span-full">
-                    <label>Observaciones de inspección física</label>
-                    <textarea class="textarea" style="min-height:70px" placeholder="Rayones, golpes o detalles visibles al momento de recibir la unidad">Rayón superficial en puerta trasera derecha. Cristal completo sin daños.</textarea>
-                  </div>
-                </div>
+                <div id="aviso-recepcion"></div>
               </section>
 
             </div>
@@ -285,26 +269,18 @@
               </div>
               <div class="card-body">
                 <dl class="dl">
-                  <dt>Cliente</dt><dd>María Fernanda Cantú Robles</dd>
-                  <dt>Teléfono</dt><dd class="mono">8123310098</dd>
-                  <dt>Vehículo</dt><dd>Mazda CX-5 2021</dd>
-                  <dt>Placas</dt><dd><span class="plate">LKW-556-D</span></dd>
-                  <dt>Ingreso</dt><dd>10 sep 2026 · 09:30</dd>
-                  <dt>Promesa</dt><dd>10 sep 2026 · 16:00</dd>
-                  <dt>Kilometraje</dt><dd class="num">38,900 km</dd>
+                  <dt>Cliente</dt><dd id="rs-cliente">—</dd>
+                  <dt>Teléfono</dt><dd class="mono" id="rs-telefono">—</dd>
+                  <dt>Vehículo</dt><dd id="rs-vehiculo">—</dd>
+                  <dt>Placas</dt><dd><span class="plate" id="rs-placas">—</span></dd>
+                  <dt>Ingreso</dt><dd id="rs-ingreso">—</dd>
+                  <dt>Promesa</dt><dd id="rs-promesa">—</dd>
+                  <dt>Kilometraje</dt><dd class="num" id="rs-km">—</dd>
                 </dl>
-
-                <div class="alert alert-good mt-16">
-                  <span data-icon="check"></span>
-                  <div>
-                    <div class="a-title">Horario disponible</div>
-                    El bloque 09:00 - 11:00 del 10/09/2026 no presenta traslapes.
-                  </div>
-                </div>
               </div>
               <div class="card-foot">
-                <span>Folio provisional</span>
-                <strong class="folio">OS-2026-0509</strong>
+                <span>Folio</span>
+                <strong class="folio" id="rs-folio">Se genera al guardar</strong>
               </div>
             </aside>
 
@@ -316,8 +292,7 @@
           <div class="row">
             <span class="dim">Los campos con <span class="req">*</span> son obligatorios</span>
             <button class="btn btn-primary" data-step-next>Continuar</button>
-            <button class="btn btn-primary" data-step-finish hidden
-                    data-demo="Orden de servicio creada con folio OS-2026-0509 (demostración).">
+            <button class="btn btn-primary" data-step-finish hidden id="btn-generar-orden">
               Generar orden de servicio
             </button>
           </div>
@@ -330,5 +305,162 @@
 
 <script src="assets/js/data.js"></script>
 <script src="assets/js/app.js"></script>
+<script>
+function initPagina() {
+  document.getElementById("rvi-fecha").value = VM.HOY;
+  document.getElementById("rvi-hora-entrada").value =
+    `${String(new Date().getHours()).padStart(2, "0")}:${String(new Date().getMinutes()).padStart(2, "0")}`;
+
+  document.getElementById("rc-telefono").addEventListener("blur", buscarClienteExistente);
+  document.getElementById("rv-placas").addEventListener("blur", buscarVehiculoExistente);
+  document.getElementById("btn-generar-orden").addEventListener("click", generarOrden);
+
+  ["rc-nombre", "rc-apellido", "rc-telefono", "rv-marca", "rv-modelo", "rv-anio", "rv-placas",
+   "rvi-fecha", "rvi-hora-entrada", "rvi-hora-prometida", "rvi-km"]
+    .forEach(id => document.getElementById(id).addEventListener("input", pintarResumen));
+  pintarResumen();
+}
+
+/* -------------------- Cliente recurrente -------------------- */
+async function buscarClienteExistente() {
+  const telefono = document.getElementById("rc-telefono").value.trim();
+  const aviso = document.getElementById("aviso-cliente-recurrente");
+  if (!/^[0-9]{10,15}$/.test(telefono)) return;
+  try {
+    const cliente = await vmApi("GET", `/api/clientes/buscar?telefono=${encodeURIComponent(telefono)}`);
+    if (!cliente) return;
+    document.getElementById("rc-nombre").value = cliente.nombre;
+    document.getElementById("rc-apellido").value = cliente.apellido;
+    document.getElementById("rc-rfc").value = cliente.rfc || "";
+    document.getElementById("rc-razon").value = cliente.razon_social || "";
+    document.getElementById("rc-tel-oficina").value = cliente.telefono_oficina || "";
+    document.getElementById("rc-correo").value = cliente.correo || "";
+    document.getElementById("rc-promos").checked = !!cliente.acepta_promociones;
+    document.getElementById("rc-calle").value = cliente.calle || "";
+    document.getElementById("rc-numero").value = cliente.numero || "";
+    document.getElementById("rc-cp").value = cliente.codigo_postal || "";
+    document.getElementById("rc-colonia").value = cliente.colonia || "";
+    document.getElementById("rc-municipio").value = cliente.municipio || "";
+    aviso.innerHTML = `<span data-icon="check"></span><div><div class="a-title">Expediente encontrado</div>
+      Se recuperaron los datos de ${VM.nombreCliente(cliente)}.</div>`;
+    aviso.className = "alert alert-good";
+    initIcons(aviso);
+    pintarResumen();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+/* -------------------- Placa ya registrada -------------------- */
+async function buscarVehiculoExistente() {
+  const placas = document.getElementById("rv-placas").value.trim().toUpperCase();
+  const aviso = document.getElementById("aviso-placa");
+  aviso.innerHTML = "";
+  if (placas.length < 5) return;
+  try {
+    const veh = await vmApi("GET", `/api/vehiculos/buscar?placas=${encodeURIComponent(placas)}`);
+    if (!veh) return;
+    document.getElementById("rv-marca").value = veh.marca;
+    document.getElementById("rv-modelo").value = veh.modelo;
+    document.getElementById("rv-anio").value = veh.anio;
+    document.getElementById("rv-color").value = veh.color || "";
+    document.getElementById("rv-motor").value = veh.motor || "";
+    const radio = document.querySelector(`input[name="trans"][value="${veh.transmision}"]`);
+    if (radio) { radio.checked = true; radio.dispatchEvent(new Event("change", { bubbles: true })); }
+    aviso.innerHTML = `<div class="alert alert-warn mt-24"><span data-icon="alerta"></span><div>
+      <div class="a-title">Placa ya registrada</div>
+      Esta unidad ya está en el padrón; la visita se vinculará al expediente existente.</div></div>`;
+    initIcons(aviso);
+    pintarResumen();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+/* -------------------- Resumen lateral en vivo -------------------- */
+function pintarResumen() {
+  const nombre = document.getElementById("rc-nombre").value.trim();
+  const apellido = document.getElementById("rc-apellido").value.trim();
+  document.getElementById("rs-cliente").textContent = (nombre || apellido) ? `${nombre} ${apellido}`.trim() : "—";
+  document.getElementById("rs-telefono").textContent = document.getElementById("rc-telefono").value.trim() || "—";
+
+  const marca = document.getElementById("rv-marca").value;
+  const modelo = document.getElementById("rv-modelo").value.trim();
+  const anio = document.getElementById("rv-anio").value;
+  document.getElementById("rs-vehiculo").textContent = modelo ? `${marca} ${modelo} ${anio}`.trim() : "—";
+  document.getElementById("rs-placas").textContent = document.getElementById("rv-placas").value.trim().toUpperCase() || "—";
+
+  const fecha = document.getElementById("rvi-fecha").value;
+  const hEntrada = document.getElementById("rvi-hora-entrada").value;
+  const hProm = document.getElementById("rvi-hora-prometida").value;
+  document.getElementById("rs-ingreso").textContent = fecha && hEntrada ? `${fmt.fecha(fecha)} · ${hEntrada}` : "—";
+  document.getElementById("rs-promesa").textContent = fecha && hProm ? `${fmt.fecha(fecha)} · ${hProm}` : "—";
+
+  const km = document.getElementById("rvi-km").value;
+  document.getElementById("rs-km").textContent = km ? `${fmt.int(km)} km` : "—";
+}
+
+/* -------------------- Envío -------------------- */
+async function generarOrden() {
+  const btn = document.getElementById("btn-generar-orden");
+  const aviso = document.getElementById("aviso-recepcion");
+  aviso.innerHTML = "";
+
+  const bloque = document.getElementById("rvi-bloque").value.split("-");
+
+  const payload = {
+    cliente: {
+      nombre: document.getElementById("rc-nombre").value.trim(),
+      apellido: document.getElementById("rc-apellido").value.trim(),
+      razon_social: document.getElementById("rc-razon").value.trim() || null,
+      rfc: document.getElementById("rc-rfc").value.trim() || null,
+      telefono: document.getElementById("rc-telefono").value.trim(),
+      telefono_oficina: document.getElementById("rc-tel-oficina").value.trim() || null,
+      correo: document.getElementById("rc-correo").value.trim() || null,
+      acepta_promociones: document.getElementById("rc-promos").checked,
+      calle: document.getElementById("rc-calle").value.trim() || null,
+      numero: document.getElementById("rc-numero").value.trim() || null,
+      colonia: document.getElementById("rc-colonia").value.trim() || null,
+      municipio: document.getElementById("rc-municipio").value.trim() || null,
+      estado: document.getElementById("rc-estado").value || null,
+      codigo_postal: document.getElementById("rc-cp").value.trim() || null,
+    },
+    vehiculo: {
+      placas: document.getElementById("rv-placas").value.trim().toUpperCase(),
+      marca: document.getElementById("rv-marca").value,
+      modelo: document.getElementById("rv-modelo").value.trim(),
+      anio: Number(document.getElementById("rv-anio").value),
+      color: document.getElementById("rv-color").value.trim() || null,
+      transmision: document.querySelector('input[name="trans"]:checked').value,
+      motor: document.getElementById("rv-motor").value.trim() || null,
+    },
+    visita: {
+      fecha: document.getElementById("rvi-fecha").value,
+      hora_inicio: bloque[0],
+      hora_fin: bloque[1],
+      hora_entrada: document.getElementById("rvi-hora-entrada").value,
+      hora_prometida: document.getElementById("rvi-hora-prometida").value,
+      kilometraje: Number(document.getElementById("rvi-km").value),
+      nivel_combustible: Number(document.getElementById("rvi-combustible").value),
+      motivo_ingreso: document.getElementById("rvi-motivo").value.trim(),
+      forma_pago: document.getElementById("rc-forma-pago").value,
+    },
+  };
+
+  btn.classList.add("is-disabled");
+  btn.textContent = "Guardando…";
+  try {
+    const resultado = await vmApi("POST", "/api/recepcion", payload);
+    document.getElementById("rs-folio").textContent = resultado.folio;
+    toast(`Orden ${resultado.folio} creada correctamente.`, "ok");
+    window.location.href = `orden-detalle.html?id=${resultado.id_orden}`;
+  } catch (err) {
+    aviso.innerHTML = `<div class="alert alert-danger">${icon("alerta")}<div>
+      <div class="a-title">No se pudo generar la orden</div>${err.message}</div></div>`;
+    btn.classList.remove("is-disabled");
+    btn.textContent = "Generar orden de servicio";
+  }
+}
+</script>
 </body>
 </html>

@@ -65,15 +65,39 @@
 <script src="assets/js/app.js"></script>
 <script>
 function initPagina() {
+  pintarTablero();
+
+  document.getElementById("kanban").addEventListener("click", (e) => {
+    const card = e.target.closest(".kb-card");
+    if (card) window.location.href = `orden-detalle.html?id=${card.dataset.orden}`;
+  });
+
+  document.getElementById("kanban").addEventListener("vm-kanban-drop", async (e) => {
+    const { card, colOrigen, colDestino } = e.detail;
+    const idOrden = Number(card.dataset.orden);
+    const estatusNuevo = colDestino.dataset.estatus;
+    try {
+      await vmApi("PATCH", `/api/ordenes/${idOrden}`, { estatus: estatusNuevo });
+      await vmCargarDatos();
+      pintarTablero();
+      toast(`Estatus actualizado a "${colDestino.dataset.nombre}".`, "ok");
+    } catch (err) {
+      pintarTablero();   // VM.ordenes no cambió: repintar regresa la tarjeta a su columna
+      toast(err.message, "danger");
+    }
+  });
+}
+
+/* Repinta el tablero completo a partir de VM.ordenes (se reutiliza tanto al
+   cargar la pagina como para confirmar o revertir un movimiento del Kanban). */
+function pintarTablero() {
   const ordenes = VM.ordenesExpandidas();
 
-  /* ---------------------------- KPIs ---------------------------- */
   document.getElementById("k-abiertas").textContent   = ordenes.filter(o => o.estatus !== "Entregado").length;
   document.getElementById("k-reparacion").textContent = ordenes.filter(o => o.estatus === "En reparación").length;
   document.getElementById("k-terminadas").textContent = ordenes.filter(o => o.estatus === "Terminado").length;
   document.getElementById("k-retraso").textContent    = ordenes.filter(o => enRetraso(o)).length;
 
-  /* ------------------------- Tablero Kanban ------------------------- */
   document.getElementById("kanban").innerHTML = VM.ESTATUS_ORDEN.map(col => {
     const items = ordenes.filter(o => o.estatus === col.key);
     return `<section class="kb-col" data-estatus="${col.key}" data-nombre="${col.label}" data-color="${col.color}">
@@ -87,10 +111,6 @@ function initPagina() {
       </div>
     </section>`;
   }).join("");
-
-  document.getElementById("kanban").addEventListener("click", (e) => {
-    if (e.target.closest(".kb-card")) window.location.href = "orden-detalle.html";
-  });
 }
 
 /* Una unidad va retrasada si su hora prometida ya pasó y el trabajo sigue abierto */
@@ -103,7 +123,7 @@ function enRetraso(o) {
 function tarjeta(o, col) {
   const v = o.vehiculo, c = o.cliente;
   const retraso = enRetraso(o);
-  return `<article class="kb-card" draggable="true" style="--kb-accent:${col.color}">
+  return `<article class="kb-card" draggable="true" data-orden="${o.id_orden}" style="--kb-accent:${col.color}">
     <div class="kb-card-title">${v.marca} ${v.modelo}</div>
     <div class="kb-card-sub">${v.anio} · ${v.color} · ${v.transmision}</div>
     <div style="margin-top:9px"><span class="plate">${v.placas}</span></div>

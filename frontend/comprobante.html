@@ -13,7 +13,7 @@
 <body class="doc-shell">
 
   <div class="doc-bar">
-    <a class="btn" href="orden-detalle.html">Volver a la orden</a>
+    <a class="btn" href="orden-detalle.html" id="lnk-volver">Volver a la orden</a>
     <div class="row">
       <span class="dim" style="font-size:12px">Formato F-02 · Comprobante y póliza de servicio</span>
       <button class="btn" onclick="window.print()"><span data-icon="imprimir"></span> Imprimir</button>
@@ -26,10 +26,21 @@
 <script src="assets/js/data.js"></script>
 <script src="assets/js/app.js"></script>
 <script>
-/* Se usa una orden ya entregada para mostrar el documento completo */
-const O = VM.ordenExpandida(VM.orden(5006));
+/* La orden se elige por ?id=<id_orden>; si no viene, se usa la primera
+   orden entregada, o cualquier orden si no hay ninguna entregada aun. */
+let O;
 
 function initPagina() {
+  const idParam = Number(new URLSearchParams(window.location.search).get("id"));
+  const candidata = VM.orden(idParam)
+    || VM.ordenes.find(o => o.estatus === "Entregado")
+    || VM.ordenes[0];
+  if (!candidata) {
+    document.getElementById("hoja").innerHTML = '<p style="padding:40px">No hay órdenes de servicio registradas todavía.</p>';
+    return;
+  }
+  O = VM.ordenExpandida(candidata);
+  document.getElementById("lnk-volver").href = `orden-detalle.html?id=${O.id_orden}`;
   const v = O.vehiculo, c = O.cliente;
   const subtotalRef = O.detalle.reduce((s, d) => s + d.cantidad * d.precio_unitario, 0);
 
@@ -95,7 +106,7 @@ function initPagina() {
 
     <section class="sheet-section">
       <h4>Diagnóstico y reparaciones realizadas</h4>
-      <p style="font-size:13px;line-height:1.7">${O.diagnostico}</p>
+      <p style="font-size:13px;line-height:1.7">${O.diagnostico || "Pendiente de captura."}</p>
     </section>
 
     <section class="sheet-section">
@@ -147,7 +158,7 @@ function initPagina() {
     </div>
 
     <p class="tcenter dim" style="font-size:10.5px;margin-top:34px">
-      Documento generado por el sistema VMotors · ${O.folio} · Impreso el 10 de septiembre de 2026
+      Documento generado por el sistema VMotors · ${O.folio} · Impreso el ${fmt.fecha(VM.HOY)}
     </p>`;
 }
 </script>

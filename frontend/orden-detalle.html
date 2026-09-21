@@ -27,8 +27,8 @@
         </div>
         <div class="page-actions">
           <a class="btn" href="ordenes.html">Volver al listado</a>
-          <a class="btn" href="comprobante.html"><span data-icon="imprimir"></span> Comprobante</a>
-          <button class="btn btn-primary" id="btn-guardar" data-demo="Cambios guardados en la orden (demostración).">Guardar cambios</button>
+          <a class="btn" href="comprobante.html" id="lnk-comprobante"><span data-icon="imprimir"></span> Comprobante</a>
+          <button class="btn btn-primary" id="btn-guardar">Guardar cambios</button>
         </div>
       </div>
 
@@ -73,7 +73,6 @@
                 <h3>Refacciones y mano de obra</h3>
                 <div class="sub">Desglose que alimenta el costo total de la orden</div>
               </div>
-              <button class="btn btn-sm" data-demo="Catálogo de refacciones (demostración).">Catálogo</button>
             </div>
             <div class="card-body tight">
               <div class="table-wrap">
@@ -87,8 +86,22 @@
                   <tbody id="tbody-refacciones"></tbody>
                 </table>
               </div>
-              <div class="line-add" data-demo="Alta de refacción en la orden (demostración).">
+              <div class="line-add" id="btn-mostrar-add-refaccion">
                 <span data-icon="mas"></span> Agregar refacción a la orden
+              </div>
+              <div class="field-grid fg-3" id="form-add-refaccion" hidden style="padding:14px 16px">
+                <div class="field">
+                  <label>Refacción</label>
+                  <select class="select" id="sel-refaccion"></select>
+                </div>
+                <div class="field">
+                  <label>Cantidad</label>
+                  <input class="input num" type="number" id="in-cant-refaccion" value="1" min="1" max="999">
+                </div>
+                <div class="field" style="align-self:flex-end">
+                  <button class="btn btn-primary btn-sm" id="btn-add-refaccion">Agregar</button>
+                  <button class="btn btn-sm" id="btn-cancelar-refaccion">Cancelar</button>
+                </div>
               </div>
             </div>
             <div class="card-foot" style="align-items:flex-start">
@@ -161,12 +174,23 @@
 <script src="assets/js/data.js"></script>
 <script src="assets/js/app.js"></script>
 <script>
-/* La orden mostrada por el prototipo */
-const ORDEN = VM.ordenExpandida(VM.orden(5001));
-let estatusActual = ORDEN.estatus;
-let manoObra = ORDEN.costo_mano_obra;
+/* La orden se elige por ?id=<id_orden>; si no viene o no existe, se usa la
+   primera orden abierta disponible. */
+let ORDEN, estatusActual, manoObra;
 
 function initPagina() {
+  const idParam = Number(new URLSearchParams(window.location.search).get("id"));
+  const base = VM.orden(idParam) || VM.ordenes[0];
+  if (!base) {
+    document.querySelector(".content").innerHTML =
+      '<div class="alert alert-info">No hay órdenes de servicio registradas todavía.</div>';
+    return;
+  }
+  ORDEN = VM.ordenExpandida(base);
+  estatusActual = ORDEN.estatus;
+  manoObra = ORDEN.costo_mano_obra;
+  document.getElementById("lnk-comprobante").href = `comprobante.html?id=${ORDEN.id_orden}`;
+
   const v = ORDEN.vehiculo, c = ORDEN.cliente;
 
   document.getElementById("titulo").textContent = ORDEN.folio;
@@ -206,6 +230,52 @@ function initPagina() {
     pintarTotales();
     validarEstatus();
   });
+
+  document.getElementById("btn-guardar").addEventListener("click", guardarCambios);
+
+  document.getElementById("sel-refaccion").innerHTML = VM.refacciones
+    .map(r => `<option value="${r.id_refaccion}">${r.clave} · ${r.descripcion} (${fmt.money(r.precio_unitario)})</option>`)
+    .join("");
+  document.getElementById("btn-mostrar-add-refaccion").addEventListener("click", () => {
+    document.getElementById("form-add-refaccion").hidden = false;
+    document.getElementById("btn-mostrar-add-refaccion").hidden = true;
+  });
+  document.getElementById("btn-cancelar-refaccion").addEventListener("click", () => {
+    document.getElementById("form-add-refaccion").hidden = true;
+    document.getElementById("btn-mostrar-add-refaccion").hidden = false;
+  });
+  document.getElementById("btn-add-refaccion").addEventListener("click", agregarRefaccion);
+}
+
+/* Vuelve a traer los datos del backend y re-pinta las secciones que dependen
+   de ellos, sin tocar los campos que el administrador esté editando (el
+   diagnóstico y la mano de obra sólo se guardan con "Guardar cambios"). */
+async function refrescarDesdeServidor() {
+  await vmCargarDatos();
+  ORDEN = VM.ordenExpandida(VM.orden(ORDEN.id_orden));
+  estatusActual = ORDEN.estatus;
+  pintarFlujo();
+  pintarRefacciones();
+  pintarTimeline();
+}
+
+async function guardarCambios() {
+  const btn = document.getElementById("btn-guardar");
+  if (btn.classList.contains("is-disabled")) return;
+  const textoOriginal = btn.textContent;
+  btn.textContent = "Guardando…";
+  try {
+    await vmApi("PATCH", `/api/ordenes/${ORDEN.id_orden}`, {
+      diagnostico: document.getElementById("txt-diag").value,
+      costo_mano_obra: manoObra,
+    });
+    await refrescarDesdeServidor();
+    toast("Cambios guardados correctamente.", "ok");
+  } catch (err) {
+    avisar("danger", "No se pudieron guardar los cambios", err.message);
+  } finally {
+    btn.textContent = textoOriginal;
+  }
 }
 
 /* ------------------------ Flujo de estatus (Modulo 3.2) ------------------------ */
@@ -228,7 +298,7 @@ function pintarFlujo() {
 
 const etiqueta = (key) => (VM.ESTATUS_ORDEN.find(e => e.key === key) || {}).label || key;
 
-function intentarCambio(destino) {
+async function intentarCambio(destino) {
   const iAct = VM.ESTATUS_ORDEN.findIndex(e => e.key === estatusActual);
   const iDes = VM.ESTATUS_ORDEN.findIndex(e => e.key === destino);
 
@@ -243,9 +313,13 @@ function intentarCambio(destino) {
       "La orden no puede marcarse como <strong>Entregado</strong> mientras el costo total sea cero. Capture la mano de obra o las refacciones aplicadas.");
     return;
   }
-  estatusActual = destino;
-  pintarFlujo();
-  toast(`Estatus actualizado a "${etiqueta(destino)}" (demostración).`, "ok");
+  try {
+    await vmApi("PATCH", `/api/ordenes/${ORDEN.id_orden}`, { estatus: destino });
+    await refrescarDesdeServidor();
+    toast(`Estatus actualizado a "${etiqueta(destino)}".`, "ok");
+  } catch (err) {
+    avisar("danger", "No se pudo actualizar el estatus", err.message);
+  }
 }
 
 function validarEstatus() {
@@ -289,11 +363,43 @@ function pintarRefacciones() {
       <td class="tright num">${fmt.money(d.precio_unitario)}</td>
       <td class="tright num cell-strong">${fmt.money(d.cantidad * d.precio_unitario)}</td>
       <td class="actions">
-        <button class="btn btn-ghost btn-sm" data-demo="Renglón eliminado (demostración).">Quitar</button>
+        <button class="btn btn-ghost btn-sm" data-quitar="${d.id_detalle}">Quitar</button>
       </td>
     </tr>`;
   }).join("") : `<tr><td colspan="7" class="tcenter dim" style="padding:26px">Aún no se registran refacciones en esta orden.</td></tr>`;
   pintarTotales();
+
+  tb.querySelectorAll("[data-quitar]").forEach(b => {
+    b.addEventListener("click", () => quitarRefaccion(Number(b.dataset.quitar)));
+  });
+}
+
+async function quitarRefaccion(idDetalle) {
+  try {
+    await vmApi("DELETE", `/api/ordenes/${ORDEN.id_orden}/refacciones/${idDetalle}`);
+    await refrescarDesdeServidor();
+    toast("Refacción eliminada de la orden.", "ok");
+  } catch (err) {
+    toast(err.message, "danger");
+  }
+}
+
+async function agregarRefaccion() {
+  const idRefaccion = Number(document.getElementById("sel-refaccion").value);
+  const cantidad = Number(document.getElementById("in-cant-refaccion").value);
+  const btn = document.getElementById("btn-add-refaccion");
+  btn.classList.add("is-disabled");
+  try {
+    await vmApi("POST", `/api/ordenes/${ORDEN.id_orden}/refacciones`, { id_refaccion: idRefaccion, cantidad });
+    await refrescarDesdeServidor();
+    document.getElementById("form-add-refaccion").hidden = true;
+    document.getElementById("btn-mostrar-add-refaccion").hidden = false;
+    toast("Refacción agregada a la orden.", "ok");
+  } catch (err) {
+    toast(err.message, "danger");
+  } finally {
+    btn.classList.remove("is-disabled");
+  }
 }
 
 function pintarTotales() {

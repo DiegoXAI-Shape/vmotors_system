@@ -126,7 +126,7 @@ function initPagina() {
       <td>${pillOrden(o.estatus)}</td>
       <td class="tright num cell-strong">${o.costo_total > 0 ? fmt.money(o.costo_total) : '<span class="dim">Por definir</span>'}</td>
       <td class="actions">
-        <a class="btn btn-sm" href="orden-detalle.html">Abrir</a>
+        <a class="btn btn-sm" href="orden-detalle.html?id=${o.id_orden}">Abrir</a>
       </td>
     </tr>`).join("");
 }

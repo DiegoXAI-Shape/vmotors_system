@@ -48,29 +48,18 @@
       <h1>Iniciar sesión</h1>
       <p>Acceso exclusivo del administrador del taller.</p>
 
-      <div class="stack" style="gap:16px">
+      <form class="stack" style="gap:16px" id="form-login">
         <div class="field">
           <label>Usuario</label>
-          <input class="input" value="administrador" autocomplete="username">
+          <input class="input" id="in-usuario" value="administrador" autocomplete="username" required>
         </div>
         <div class="field">
           <label>Contraseña</label>
-          <input class="input" type="password" value="demostracion" autocomplete="current-password">
+          <input class="input" id="in-contrasena" type="password" autocomplete="current-password" required>
         </div>
-        <div class="row-between">
-          <label class="check"><input type="checkbox" checked> Mantener sesión iniciada</label>
-          <a href="#" class="dim" style="font-size:12.5px" data-demo="Recuperación de contraseña (demostración).">¿Olvidó su contraseña?</a>
-        </div>
-        <a class="btn btn-primary" href="index.html" style="height:44px">Entrar al sistema</a>
-      </div>
-
-      <div class="alert alert-info mt-24">
-        <span data-icon="info"></span>
-        <div>
-          <div class="a-title">Prototipo sin autenticación</div>
-          Las credenciales son ilustrativas; el botón lleva directamente al tablero operativo.
-        </div>
-      </div>
+        <div id="aviso-login"></div>
+        <button class="btn btn-primary" type="submit" style="height:44px" id="btn-entrar">Entrar al sistema</button>
+      </form>
 
       <p class="dim tcenter" style="font-size:11.5px;margin-top:26px">
         VMotors v0.9 · Un solo nivel de usuario (Administrador)
@@ -82,5 +71,38 @@
 
 <script src="assets/js/data.js"></script>
 <script src="assets/js/app.js"></script>
+<script>
+document.getElementById("form-login").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const usuario = document.getElementById("in-usuario").value.trim();
+  const contrasena = document.getElementById("in-contrasena").value;
+  const aviso = document.getElementById("aviso-login");
+  const btn = document.getElementById("btn-entrar");
+  aviso.innerHTML = "";
+  btn.disabled = true;
+  btn.textContent = "Verificando…";
+  try {
+    const r = await fetch("/api/auth/login", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuario, contrasena }),
+    });
+    const data = await r.json();
+    if (data.ok) {
+      window.location.href = "index.html";
+      return;
+    }
+    aviso.innerHTML = `<div class="alert alert-danger"><span data-icon="alerta"></span><div>${data.error || "Usuario o contraseña incorrectos."}</div></div>`;
+    initIcons(aviso);
+  } catch (err) {
+    aviso.innerHTML = `<div class="alert alert-danger"><span data-icon="alerta"></span><div>No fue posible conectar con el servidor.</div></div>`;
+    initIcons(aviso);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Entrar al sistema";
+  }
+});
+</script>
 </body>
 </html>

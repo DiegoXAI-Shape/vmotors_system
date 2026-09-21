@@ -56,6 +56,15 @@ function icon(name, cls) {
    ------------------------------------------------------------------------- */
 const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
 const DIAS  = ["dom","lun","mar","mié","jue","vie","sáb"];
+const DIAS_LARGO = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+const MESES_LARGO = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+
+/* "Jueves 17 de septiembre, 2026" a partir de una fecha ISO "YYYY-MM-DD" */
+function fechaLarga(iso) {
+  const [y, m, d] = iso.slice(0, 10).split("-");
+  const dia = new Date(iso + "T12:00:00").getDay();
+  return `${DIAS_LARGO[dia]} ${Number(d)} de ${MESES_LARGO[Number(m) - 1]}, ${y}`;
+}
 
 const fmt = {
   money(n, decimales = 2) {
@@ -168,7 +177,7 @@ function renderShell() {
     </nav>
     <div class="sidebar-foot">
       <span>Versión 0.9 · Prototipo</span>
-      <a href="login.html" title="Cerrar sesión">${icon("salir")}</a>
+      <a href="login.html" data-logout title="Cerrar sesión">${icon("salir")}</a>
     </div>`;
 
   const titulo = document.body.dataset.title || "";
@@ -184,7 +193,7 @@ function renderShell() {
       ${icon("buscar")}
       <input type="search" placeholder="Buscar placa, cliente o folio" aria-label="Buscar">
     </div>
-    <div class="topbar-chip">${icon("reloj")} Jueves 10 de septiembre, 2026</div>
+    <div class="topbar-chip">${icon("reloj")} ${fechaLarga(VM.HOY)}</div>
     <div class="user-chip">
       <div class="avatar">AD</div>
       <div>
@@ -204,9 +213,10 @@ function toast(mensaje, tipo = "info") {
     cont.className = "toast-stack";
     document.body.appendChild(cont);
   }
+  const iconos = { ok: "check", danger: "alerta", warn: "alerta", info: "info" };
   const el = document.createElement("div");
   el.className = `toast toast-${tipo}`;
-  el.innerHTML = `${icon(tipo === "ok" ? "check" : "info")}<span>${mensaje}</span>`;
+  el.innerHTML = `${icon(iconos[tipo] || "info")}<span>${mensaje}</span>`;
   cont.appendChild(el);
   requestAnimationFrame(() => el.classList.add("is-on"));
   setTimeout(() => {
@@ -233,6 +243,50 @@ function initDemoActions() {
     if (!el) return;
     ev.preventDefault();
     toast(el.dataset.demo || "Acción de demostración: el prototipo no guarda información.");
+  });
+}
+
+/* -------------------------------------------------------------------------
+   Llamadas de escritura a la API (POST/PATCH/DELETE)
+   ------------------------------------------------------------------------- */
+
+/* FastAPI devuelve detail como string (errores de negocio, 404/409) o como
+   arreglo de {loc, msg, type} (errores de validación de Pydantic, 422). */
+function _mensajeError(data) {
+  if (!data) return "Ocurrió un error inesperado.";
+  if (typeof data.detail === "string") return data.detail;
+  if (Array.isArray(data.detail)) return data.detail.map(e => e.msg).join(" · ");
+  return "Ocurrió un error inesperado.";
+}
+
+async function vmApi(method, url, body) {
+  let r;
+  try {
+    r = await fetch(url, {
+      method,
+      credentials: "same-origin",
+      headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new Error("No fue posible conectar con el servidor.");
+  }
+  if (r.status === 401) { window.location.href = "login.html"; throw new Error("Sesión expirada."); }
+  let data = null;
+  try { data = await r.json(); } catch { /* respuesta sin cuerpo */ }
+  if (!r.ok) throw new Error(_mensajeError(data));
+  return data;
+}
+
+/* Cierre de sesión real: avisa al backend antes de volver al login */
+function initLogout() {
+  document.addEventListener("click", (ev) => {
+    const el = ev.target.closest("[data-logout]");
+    if (!el) return;
+    ev.preventDefault();
+    fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" })
+      .catch(() => {})
+      .finally(() => { window.location.href = "login.html"; });
   });
 }
 
@@ -421,11 +475,26 @@ function initStepper() {
   pintar();
 }
 
-/* Kanban: arrastrar tarjetas entre columnas (solo visual) */
+/* Kanban: arrastrar tarjetas entre columnas. Todos los listeners van en el
+   contenedor `.kanban` (delegados), para seguir funcionando aunque la pagina
+   vuelva a pintar el HTML interno (por ejemplo, al revertir un movimiento
+   que el backend rechazó). */
 function initKanban() {
   const board = document.querySelector(".kanban");
   if (!board) return;
   let arrastrada = null;
+
+  const actualizarConteos = () => {
+    board.querySelectorAll(".kb-col").forEach(col => {
+      const n = col.querySelectorAll(".kb-card").length;
+      const countEl = col.querySelector(".kb-count");
+      if (countEl) countEl.textContent = n;
+      const body = col.querySelector(".kb-body");
+      if (body && n === 0 && !body.querySelector(".kb-empty")) {
+        body.insertAdjacentHTML("beforeend", '<div class="kb-empty">Sin unidades</div>');
+      }
+    });
+  };
 
   board.addEventListener("dragstart", (e) => {
     const card = e.target.closest(".kb-card");
@@ -440,32 +509,36 @@ function initKanban() {
     arrastrada = null;
     actualizarConteos();
   });
-  board.querySelectorAll(".kb-col").forEach(col => {
-    col.addEventListener("dragover", (e) => { e.preventDefault(); col.classList.add("drop-target"); });
-    col.addEventListener("dragleave", () => col.classList.remove("drop-target"));
-    col.addEventListener("drop", (e) => {
-      e.preventDefault();
-      col.classList.remove("drop-target");
-      if (!arrastrada) return;
-      const destino = col.querySelector(".kb-body");
-      const vacio = destino.querySelector(".kb-empty");
-      if (vacio) vacio.remove();
-      destino.appendChild(arrastrada);
-      arrastrada.style.setProperty("--kb-accent", col.dataset.color);
-      toast(`Estatus actualizado a "${col.dataset.nombre}" (demostración).`, "ok");
-    });
+  board.addEventListener("dragover", (e) => {
+    const col = e.target.closest(".kb-col");
+    if (!col) return;
+    e.preventDefault();
+    board.querySelectorAll(".drop-target").forEach(c => { if (c !== col) c.classList.remove("drop-target"); });
+    col.classList.add("drop-target");
   });
-
-  function actualizarConteos() {
-    board.querySelectorAll(".kb-col").forEach(col => {
-      const n = col.querySelectorAll(".kb-card").length;
-      col.querySelector(".kb-count").textContent = n;
-      const body = col.querySelector(".kb-body");
-      if (n === 0 && !body.querySelector(".kb-empty")) {
-        body.insertAdjacentHTML("beforeend", '<div class="kb-empty">Sin unidades</div>');
-      }
-    });
-  }
+  board.addEventListener("dragleave", (e) => {
+    const col = e.target.closest(".kb-col");
+    if (col && !col.contains(e.relatedTarget)) col.classList.remove("drop-target");
+  });
+  board.addEventListener("drop", (e) => {
+    const col = e.target.closest(".kb-col");
+    if (!col) return;
+    e.preventDefault();
+    col.classList.remove("drop-target");
+    if (!arrastrada) return;
+    const colOrigen = arrastrada.closest(".kb-col");
+    if (colOrigen === col) return;
+    const destino = col.querySelector(".kb-body");
+    const vacio = destino.querySelector(".kb-empty");
+    if (vacio) vacio.remove();
+    destino.appendChild(arrastrada);
+    arrastrada.style.setProperty("--kb-accent", col.dataset.color);
+    /* La pagina decide que hacer con el cambio (persistirlo o revertirlo);
+       aqui solo se mueve la tarjeta en pantalla. */
+    board.dispatchEvent(new CustomEvent("vm-kanban-drop", {
+      detail: { card: arrastrada, colOrigen, colDestino: col },
+    }));
+  });
 }
 
 /* Modales */
@@ -530,16 +603,31 @@ function initRadioCards() {
 /* -------------------------------------------------------------------------
    7. Arranque
    ------------------------------------------------------------------------- */
+/* Overlay de carga mientras VM.listo resuelve: evita la pantalla en blanco
+   que se veia antes de que llegara la primera respuesta de la API. */
+function mostrarCargando() {
+  if (!document.body.dataset.page) return null;
+  const el = document.createElement("div");
+  el.className = "vm-loading";
+  el.innerHTML = `<div class="vm-spinner"></div><span>Cargando VMotors…</span>`;
+  document.body.appendChild(el);
+  return el;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-  renderShell();
-  /* La pagina pinta su contenido primero; despues se enlazan los componentes */
-  if (typeof initPagina === "function") initPagina();
-  initIcons();
-  initDemoActions();
-  initStepper();
-  initKanban();
-  initModals();
-  initSegmentos();
-  initBusquedaTabla();
-  initRadioCards();
+  const overlay = mostrarCargando();
+  Promise.resolve(VM.listo).then(() => {
+    renderShell();
+    /* La pagina pinta su contenido primero; despues se enlazan los componentes */
+    if (typeof initPagina === "function") initPagina();
+    initIcons();
+    initDemoActions();
+    initLogout();
+    initStepper();
+    initKanban();
+    initModals();
+    initSegmentos();
+    initBusquedaTabla();
+    initRadioCards();
+  }).finally(() => { if (overlay) overlay.remove(); });
 });
