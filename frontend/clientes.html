@@ -23,7 +23,7 @@
           <p>Expediente único por propietario. Cada cliente puede tener una o varias unidades vinculadas (relación 1 a N con vehículos).</p>
         </div>
         <div class="page-actions">
-          <button class="btn" data-demo="Exportación a CSV (demostración).">Exportar</button>
+          <button class="btn" id="btn-exportar-clientes">Exportar</button>
           <a class="btn btn-primary" href="recepcion.html">Nuevo cliente</a>
         </div>
       </div>
@@ -39,7 +39,7 @@
         <div class="toolbar">
           <div class="search">
             <span data-icon="buscar"></span>
-            <input type="search" placeholder="Nombre, teléfono, RFC o municipio" data-search-target="#tabla-clientes">
+            <input type="search" id="q-clientes" placeholder="Nombre, teléfono, RFC o municipio">
           </div>
           <div class="seg">
             <button class="is-active">Todos</button>
@@ -66,13 +66,7 @@
 
         <div class="card-foot">
           <span>Mostrando <strong id="n-mostrados">0</strong> de <strong id="n-total">0</strong> registros</span>
-          <div class="pagination">
-            <button>‹</button>
-            <button class="is-active">1</button>
-            <button data-demo="Paginación (demostración).">2</button>
-            <button data-demo="Paginación (demostración).">3</button>
-            <button data-demo="Paginación (demostración).">›</button>
-          </div>
+          <div class="pagination" id="pag-clientes"></div>
         </div>
       </article>
 
@@ -91,10 +85,14 @@
       <button class="btn btn-ghost btn-icon" data-modal-close><span data-icon="cerrar"></span></button>
     </div>
     <div class="modal-body" id="fc-body"></div>
-    <div class="modal-foot">
+    <div class="modal-foot" id="fc-foot-ver">
       <button class="btn" data-modal-close>Cerrar</button>
-      <button class="btn" data-demo="Edición de expediente (demostración).">Editar</button>
+      <button class="btn" id="btn-editar-cliente">Editar</button>
       <a class="btn btn-primary" href="agenda.html">Agendar cita</a>
+    </div>
+    <div class="modal-foot" id="fc-foot-editar" hidden>
+      <button class="btn" id="btn-cancelar-edicion">Cancelar</button>
+      <button class="btn btn-primary" id="btn-guardar-cliente">Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -102,19 +100,76 @@
 <script src="assets/js/data.js"></script>
 <script src="assets/js/app.js"></script>
 <script>
+let consultaClientes = "";
+let paginadorClientes;
+
 function initPagina() {
   const conRfc  = VM.clientes.filter(c => c.rfc).length;
   const conProm = VM.clientes.filter(c => c.acepta_promociones).length;
-
   document.getElementById("k-total").textContent = VM.clientes.length;
   document.getElementById("k-rfc").textContent   = conRfc;
   document.getElementById("k-promo").textContent = conProm;
   document.getElementById("k-veh").textContent   = VM.vehiculos.length;
   document.getElementById("k-prom").textContent  = (VM.vehiculos.length / VM.clientes.length).toFixed(1);
-  document.getElementById("n-mostrados").textContent = VM.clientes.length;
-  document.getElementById("n-total").textContent     = VM.clientes.length;
 
-  document.getElementById("tbody-clientes").innerHTML = VM.clientes.map(c => {
+  paginadorClientes = crearPaginador({
+    contenedor: document.getElementById("pag-clientes"),
+    porPagina: 15,
+    onCambio: pintarTablaClientes,
+  });
+  paginadorClientes.actualizar(clientesFiltrados().length);
+
+  document.getElementById("q-clientes").addEventListener("input", (e) => {
+    consultaClientes = e.target.value.trim().toLowerCase();
+    paginadorClientes.actualizar(clientesFiltrados().length);
+  });
+
+  document.getElementById("tbody-clientes").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-ver]");
+    if (b) abrirFicha(+b.dataset.ver);
+  });
+  document.getElementById("btn-editar-cliente").addEventListener("click", () => {
+    pintarFichaEdicion(clienteActual);
+    document.getElementById("fc-foot-ver").hidden = true;
+    document.getElementById("fc-foot-editar").hidden = false;
+  });
+  document.getElementById("btn-cancelar-edicion").addEventListener("click", () => {
+    pintarFichaVista(clienteActual);
+    document.getElementById("fc-foot-editar").hidden = true;
+    document.getElementById("fc-foot-ver").hidden = false;
+  });
+  document.getElementById("btn-guardar-cliente").addEventListener("click", guardarEdicionCliente);
+
+  document.getElementById("btn-exportar-clientes").addEventListener("click", () => {
+    exportarCSV("vmotors-clientes.csv",
+      [
+        { clave: "id_cliente", titulo: "ID" }, { clave: "nombre", titulo: "Nombre" },
+        { clave: "apellido", titulo: "Apellido" }, { clave: "razon_social", titulo: "Razón social" },
+        { clave: "rfc", titulo: "RFC" }, { clave: "telefono", titulo: "Teléfono" },
+        { clave: "correo", titulo: "Correo" }, { clave: "municipio", titulo: "Municipio" },
+        { clave: "codigo_postal", titulo: "C.P." }, { clave: "fecha_registro", titulo: "Alta" },
+      ],
+      clientesFiltrados());
+  });
+}
+
+function clientesFiltrados() {
+  if (!consultaClientes) return VM.clientes;
+  return VM.clientes.filter(c => {
+    const texto = `${VM.nombreCliente(c)} ${c.telefono} ${c.rfc || ""} ${c.municipio || ""}`.toLowerCase();
+    return texto.includes(consultaClientes);
+  });
+}
+
+function pintarTablaClientes(pagina) {
+  const filtrados = clientesFiltrados();
+  const porPagina = 15;
+  const pagina_ = filtrados.slice((pagina - 1) * porPagina, pagina * porPagina);
+
+  document.getElementById("n-mostrados").textContent = pagina_.length;
+  document.getElementById("n-total").textContent     = filtrados.length;
+
+  document.getElementById("tbody-clientes").innerHTML = pagina_.map(c => {
     const unidades = VM.vehiculosDeCliente(c.id_cliente);
     return `<tr data-cliente="${c.id_cliente}">
       <td>
@@ -147,14 +202,19 @@ function initPagina() {
       </td>
     </tr>`;
   }).join("");
-
-  document.getElementById("tbody-clientes").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-ver]");
-    if (b) abrirFicha(+b.dataset.ver);
-  });
 }
 
+let clienteActual = null;
+
 function abrirFicha(id) {
+  clienteActual = id;
+  document.getElementById("fc-foot-ver").hidden = false;
+  document.getElementById("fc-foot-editar").hidden = true;
+  pintarFichaVista(id);
+  document.getElementById("modal-cliente").classList.add("is-open");
+}
+
+function pintarFichaVista(id) {
   const c = VM.cliente(id);
   const unidades = VM.vehiculosDeCliente(id);
   const citas = VM.citas.filter(x => unidades.some(u => u.id_vehiculo === x.id_vehiculo));
@@ -198,8 +258,71 @@ function abrirFicha(id) {
       <div><div class="kpi-label">Citas totales</div><div class="kpi-value num" style="font-size:22px">${citas.length}</div></div>
       <div><div class="kpi-label">Última visita</div><div class="kpi-value" style="font-size:22px">${fmt.fecha(citas.map(x => x.fecha).sort().reverse()[0] || null)}</div></div>
     </div>`;
+}
 
-  document.getElementById("modal-cliente").classList.add("is-open");
+/* -------------------- Edición del cliente -------------------- */
+function pintarFichaEdicion(id) {
+  const c = VM.cliente(id);
+  document.getElementById("fc-body").innerHTML = `
+    <div class="fieldset-title">Identificación</div>
+    <div class="field-grid fg-3" style="margin-bottom:18px">
+      <div class="field"><label>Nombre(s)</label><input class="input" id="fe-nombre" value="${c.nombre}"></div>
+      <div class="field"><label>Apellidos</label><input class="input" id="fe-apellido" value="${c.apellido}"></div>
+      <div class="field"><label>R.F.C.</label><input class="input mono" id="fe-rfc" maxlength="13" value="${c.rfc || ""}"></div>
+      <div class="field span-2"><label>Razón social</label><input class="input" id="fe-razon" value="${c.razon_social || ""}"></div>
+    </div>
+    <div class="fieldset-title">Contacto</div>
+    <div class="field-grid fg-3" style="margin-bottom:18px">
+      <div class="field"><label>Teléfono casa</label><input class="input" id="fe-telefono" value="${c.telefono}"></div>
+      <div class="field"><label>Teléfono oficina</label><input class="input" id="fe-tel-oficina" value="${c.telefono_oficina || ""}"></div>
+      <div class="field"><label>Correo</label><input class="input" id="fe-correo" type="email" value="${c.correo || ""}"></div>
+      <div class="field span-3"><label class="check"><input type="checkbox" id="fe-promos" ${c.acepta_promociones ? "checked" : ""}> Acepta promociones</label></div>
+    </div>
+    <div class="fieldset-title">Domicilio</div>
+    <div class="field-grid fg-4" style="margin-bottom:10px">
+      <div class="field span-2"><label>Calle</label><input class="input" id="fe-calle" value="${c.calle || ""}"></div>
+      <div class="field"><label>Número</label><input class="input" id="fe-numero" value="${c.numero || ""}"></div>
+      <div class="field"><label>C.P.</label><input class="input" id="fe-cp" maxlength="5" value="${c.codigo_postal || ""}"></div>
+      <div class="field span-2"><label>Colonia</label><input class="input" id="fe-colonia" value="${c.colonia || ""}"></div>
+      <div class="field"><label>Municipio</label><input class="input" id="fe-municipio" value="${c.municipio || ""}"></div>
+      <div class="field"><label>Estado</label><input class="input" id="fe-estado" value="${c.estado || ""}"></div>
+    </div>
+    <div id="aviso-edicion-cliente"></div>`;
+}
+
+async function guardarEdicionCliente() {
+  const btn = document.getElementById("btn-guardar-cliente");
+  const aviso = document.getElementById("aviso-edicion-cliente");
+  btn.classList.add("is-disabled");
+  try {
+    await vmApi("PATCH", `/api/clientes/${clienteActual}`, {
+      nombre: document.getElementById("fe-nombre").value.trim(),
+      apellido: document.getElementById("fe-apellido").value.trim(),
+      rfc: document.getElementById("fe-rfc").value.trim() || null,
+      razon_social: document.getElementById("fe-razon").value.trim() || null,
+      telefono: document.getElementById("fe-telefono").value.trim(),
+      telefono_oficina: document.getElementById("fe-tel-oficina").value.trim() || null,
+      correo: document.getElementById("fe-correo").value.trim() || null,
+      acepta_promociones: document.getElementById("fe-promos").checked,
+      calle: document.getElementById("fe-calle").value.trim() || null,
+      numero: document.getElementById("fe-numero").value.trim() || null,
+      codigo_postal: document.getElementById("fe-cp").value.trim() || null,
+      colonia: document.getElementById("fe-colonia").value.trim() || null,
+      municipio: document.getElementById("fe-municipio").value.trim() || null,
+      estado: document.getElementById("fe-estado").value.trim() || null,
+    });
+    await vmCargarDatos();
+    paginadorClientes.actualizar(clientesFiltrados().length);
+    pintarFichaVista(clienteActual);
+    document.getElementById("fc-foot-editar").hidden = true;
+    document.getElementById("fc-foot-ver").hidden = false;
+    toast("Cliente actualizado correctamente.", "ok");
+  } catch (err) {
+    aviso.innerHTML = `<div class="alert alert-danger">${icon("alerta")}<div>${err.message}</div></div>`;
+    initIcons(aviso);
+  } finally {
+    btn.classList.remove("is-disabled");
+  }
 }
 </script>
 </body>

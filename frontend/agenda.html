@@ -116,8 +116,8 @@
     <div class="modal-body" id="mc-body"></div>
     <div class="modal-foot">
       <button class="btn" data-modal-close>Cerrar</button>
-      <button class="btn" data-demo="Cita reprogramada (demostración).">Reprogramar</button>
-      <a class="btn btn-primary" href="orden-detalle.html">Abrir orden de servicio</a>
+      <button class="btn" id="btn-cancelar-cita">Cancelar cita</button>
+      <a class="btn btn-primary" href="orden-detalle.html" id="lnk-orden-cita">Abrir orden de servicio</a>
     </div>
   </div>
 </div>
@@ -165,6 +165,7 @@ function initPagina() {
   pintarProximas();
 
   document.getElementById("btn-guardar").addEventListener("click", confirmarCita);
+  document.getElementById("btn-cancelar-cita").addEventListener("click", cancelarCitaActual);
 }
 
 /* ------------------------- Confirmar cita (POST real) ------------------------- */
@@ -271,7 +272,10 @@ function pintarCalendario() {
 }
 
 /* ------------------------- Detalle en modal ------------------------- */
+let citaActual = null;
+
 function abrirDetalle(idCita) {
+  citaActual = idCita;
   const c  = VM.cita(idCita);
   const v  = VM.vehiculo(c.id_vehiculo);
   const cl = VM.cliente(v.id_cliente);
@@ -291,8 +295,35 @@ function abrirDetalle(idCita) {
       <dt>Teléfono</dt><dd class="mono">${cl.telefono}</dd>
       <dt>Correo</dt><dd>${cl.correo || "No registrado"}</dd>
       <dt>Motivo</dt><dd>${c.motivo_ingreso}</dd>
-    </dl>`;
+    </dl>
+    <div id="aviso-cancelar-cita"></div>`;
+
+  const lnkOrden = document.getElementById("lnk-orden-cita");
+  lnkOrden.hidden = !o;
+  if (o) lnkOrden.href = `orden-detalle.html?id=${o.id_orden}`;
+
+  const btnCancelar = document.getElementById("btn-cancelar-cita");
+  btnCancelar.hidden = c.estatus_cita !== "Agendada";
+
   document.getElementById("modal-cita").classList.add("is-open");
+}
+
+async function cancelarCitaActual() {
+  const c = VM.cita(citaActual);
+  if (!confirm(`¿Cancelar la cita del ${fmt.fecha(c.fecha)} a las ${c.hora_inicio}?`)) return;
+  const aviso = document.getElementById("aviso-cancelar-cita");
+  try {
+    await vmApi("PATCH", `/api/citas/${citaActual}`, { estatus_cita: "Cancelada" });
+    await vmCargarDatos();
+    toast("Cita cancelada.", "ok");
+    document.getElementById("modal-cita").classList.remove("is-open");
+    pintarCalendario();
+    pintarProximas();
+    pintarSlots();
+  } catch (err) {
+    aviso.innerHTML = `<div class="alert alert-danger">${icon("alerta")}<div>${err.message}</div></div>`;
+    initIcons(aviso);
+  }
 }
 
 /* ------------------------- Panel E-01 ------------------------- */

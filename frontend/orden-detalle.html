@@ -28,6 +28,7 @@
         <div class="page-actions">
           <a class="btn" href="ordenes.html">Volver al listado</a>
           <a class="btn" href="comprobante.html" id="lnk-comprobante"><span data-icon="imprimir"></span> Comprobante</a>
+          <button class="btn" id="btn-eliminar-orden" hidden>Eliminar orden</button>
           <button class="btn btn-primary" id="btn-guardar">Guardar cambios</button>
         </div>
       </div>
@@ -190,6 +191,8 @@ function initPagina() {
   estatusActual = ORDEN.estatus;
   manoObra = ORDEN.costo_mano_obra;
   document.getElementById("lnk-comprobante").href = `comprobante.html?id=${ORDEN.id_orden}`;
+  document.getElementById("btn-eliminar-orden").addEventListener("click", eliminarOrden);
+  actualizarBotonEliminar();
 
   const v = ORDEN.vehiculo, c = ORDEN.cliente;
 
@@ -257,6 +260,25 @@ async function refrescarDesdeServidor() {
   pintarFlujo();
   pintarRefacciones();
   pintarTimeline();
+  actualizarBotonEliminar();
+}
+
+/* Solo se puede borrar una orden recien creada (sin diagnostico ni trabajo
+   registrado); mas alla de eso se corrige, no se borra. */
+function actualizarBotonEliminar() {
+  document.getElementById("btn-eliminar-orden").hidden =
+    !["Pendiente", "Recibido"].includes(estatusActual);
+}
+
+async function eliminarOrden() {
+  if (!confirm(`¿Eliminar la orden ${ORDEN.folio}? Esta acción no se puede deshacer.`)) return;
+  try {
+    await vmApi("DELETE", `/api/ordenes/${ORDEN.id_orden}`);
+    toast("Orden eliminada.", "ok");
+    window.location.href = "ordenes.html";
+  } catch (err) {
+    toast(err.message, "danger");
+  }
 }
 
 async function guardarCambios() {

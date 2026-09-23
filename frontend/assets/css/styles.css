@@ -65,6 +65,7 @@
    -------------------------------------------------------------------------- */
 *, *::before, *::after { box-sizing: border-box; }
 html, body { height: 100%; }
+body { overflow-x: hidden; }
 body {
   margin: 0;
   background: var(--bg);
@@ -204,9 +205,26 @@ table { border-collapse: collapse; width: 100%; }
   position: sticky; top: 0; z-index: 40;
 }
 .topbar-titles { min-width: 0; }
-.topbar h1 { font-size: 17px; font-weight: 650; letter-spacing: -.2px; }
-.topbar .crumb { font-size: 11.5px; color: var(--ink-3); letter-spacing: .2px; }
+.topbar h1 { font-size: 17px; font-weight: 650; letter-spacing: -.2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar .crumb { font-size: 11.5px; color: var(--ink-3); letter-spacing: .2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .topbar-spacer { flex: 1 1 auto; }
+
+/* Boton de menu: solo existe visualmente bajo los 900px (ver media query) */
+.nav-toggle {
+  display: none;
+  width: 38px; height: 38px; flex: 0 0 auto;
+  align-items: center; justify-content: center;
+  border: 1px solid var(--border); border-radius: 9px;
+  background: var(--surface); color: var(--ink-2); cursor: pointer;
+}
+.nav-toggle svg { width: 18px; height: 18px; }
+
+.sidebar-backdrop {
+  display: none;
+  position: fixed; inset: 0; z-index: 105;
+  background: rgba(16,24,40,.45);
+}
+.sidebar-backdrop.is-open { display: block; animation: fadeIn .15s ease both; }
 
 .search {
   position: relative; width: 280px;
@@ -475,6 +493,8 @@ table.tbl td.actions { text-align: right; white-space: nowrap; }
 }
 .pagination button:hover { background: var(--surface-3); }
 .pagination button.is-active { background: var(--nav); border-color: var(--nav); color: #fff; font-weight: 600; }
+.pagination button:disabled { opacity: .4; cursor: not-allowed; }
+.pagination button:disabled:hover { background: var(--surface); }
 
 /* --------------------------------------------------------------------------
    12. Formularios
@@ -559,8 +579,8 @@ table.tbl td.actions { text-align: right; white-space: nowrap; }
   transition: all .18s;
 }
 .step-meta { min-width: 0; }
-.step-name { font-size: 13px; font-weight: 600; color: var(--ink-3); white-space: nowrap; }
-.step-desc { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; }
+.step-name { font-size: 13px; font-weight: 600; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.step-desc { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .step-line { flex: 1 1 auto; height: 1.5px; background: var(--border); margin: 0 14px; border-radius: 2px; }
 .step.is-active .step-dot { border-color: var(--accent); background: var(--accent); color: #fff; box-shadow: 0 0 0 4px rgba(217,83,30,.13); }
 .step.is-active .step-name { color: var(--ink); }
@@ -897,7 +917,14 @@ table.tbl td.actions { text-align: right; white-space: nowrap; }
   .fg-4 { grid-template-columns: repeat(2, minmax(0,1fr)); }
 }
 @media (max-width: 900px) {
-  .sidebar { display: none; }
+  .nav-toggle { display: inline-flex; }
+  .sidebar {
+    position: fixed; top: 0; left: 0; z-index: 110;
+    transform: translateX(-100%);
+    transition: transform .2s ease;
+    box-shadow: var(--shadow-lg);
+  }
+  .sidebar.is-open { transform: translateX(0); }
   .content { padding: 20px 16px 44px; }
   .topbar { padding: 0 16px; }
   .search { display: none; }
@@ -906,6 +933,12 @@ table.tbl td.actions { text-align: right; white-space: nowrap; }
   .login-wrap { grid-template-columns: 1fr; }
   .login-aside { display: none; }
   .cal { grid-template-columns: 60px repeat(6, minmax(96px, 1fr)); }
+}
+@media (max-width: 640px) {
+  .topbar-chip { display: none; }
+  .user-chip .u-name, .user-chip .u-role { display: none; }
+  .fg-4 { grid-template-columns: minmax(0,1fr); }
+  .page-head h2 { font-size: 19px; }
 }
 
 /* --------------------------------------------------------------------------

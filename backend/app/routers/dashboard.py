@@ -75,8 +75,27 @@ def dashboard():
             LIMIT 8"""
     )
 
+    # ---- Indicadores del mismo periodo de 7 meses que ingresos_mensuales ----
+    resumen = query_all(
+        """SELECT COUNT(*) AS ordenes,
+                  COALESCE(SUM(costo_total), 0) AS facturacion,
+                  AVG(julianday(fecha_entrega) - julianday(fecha_ingreso)) AS dias_promedio
+             FROM ordenes_servicio
+            WHERE estatus = 'Entregado'
+              AND fecha_entrega >= date('now', '-7 months', 'start of month')"""
+    )[0]
+    ordenes_cerradas = resumen["ordenes"] or 0
+    facturacion_periodo = round(resumen["facturacion"] or 0, 2)
+    resumen_periodo = {
+        "facturacion": facturacion_periodo,
+        "ordenesCerradas": ordenes_cerradas,
+        "ticketPromedio": round(facturacion_periodo / ordenes_cerradas, 2) if ordenes_cerradas else 0,
+        "diasPromedioTaller": round(resumen["dias_promedio"], 1) if resumen["dias_promedio"] is not None else 0,
+    }
+
     return {
         "ingresosMensuales": ingresos_mensuales,
         "serviciosPorSemana": servicios_por_semana,
         "tiposServicio": tipos_servicio,
+        "resumenPeriodo": resumen_periodo,
     }

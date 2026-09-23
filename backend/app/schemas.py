@@ -190,6 +190,43 @@ class CitaIn(BaseModel):
         return v
 
 
+class CitaPatchIn(BaseModel):
+    estatus_cita: str | None = None
+    fecha: date | None = None
+    hora_inicio: str | None = None
+    motivo_ingreso: str | None = None
+
+    @field_validator("estatus_cita")
+    @classmethod
+    def _estatus_valido(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        if v not in {"Agendada", "Cancelada", "Atendida"}:
+            raise ValueError(f"Estatus de cita inválido: {v}.")
+        return v
+
+    @field_validator("hora_inicio")
+    @classmethod
+    def _hora_valida(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        if not HORA_RE.match(v):
+            raise ValueError("La hora debe tener formato HH:MM.")
+        if not ("08:00" <= v <= "17:00"):
+            raise ValueError("El bloque debe caer entre las 08:00 y las 17:00.")
+        return v
+
+    @field_validator("motivo_ingreso")
+    @classmethod
+    def _motivo_no_vacio(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip()
+        if not v:
+            raise ValueError("El motivo de ingreso no puede quedar vacío.")
+        return v
+
+
 class OrdenPatchIn(BaseModel):
     diagnostico: str | None = None
     costo_mano_obra: float | None = Field(default=None, ge=0)

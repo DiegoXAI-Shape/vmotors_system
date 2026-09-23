@@ -58,7 +58,7 @@
           <div class="card-head">
             <div>
               <h3>Facturación por mes</h3>
-              <div class="sub">Órdenes liquidadas · marzo a septiembre 2026 (pesos)</div>
+              <div class="sub" id="sub-rango-ingresos">Órdenes liquidadas (pesos)</div>
             </div>
             <div class="seg">
               <button class="is-active" data-demo="Rango de fechas (demostración).">6 meses</button>
@@ -165,6 +165,10 @@ function initPagina() {
   document.getElementById("kpi-citas-sub").textContent =
     `${citasHoy.length - canceladas} activas · ${canceladas} cancelada${canceladas === 1 ? "" : "s"}`;
   document.getElementById("total-ordenes").textContent = abiertas.length;
+
+  const primeroMes = VM.ingresosMensuales[0], ultimoMes = VM.ingresosMensuales[VM.ingresosMensuales.length - 1];
+  document.getElementById("sub-rango-ingresos").textContent =
+    primeroMes && ultimoMes ? `Órdenes liquidadas · ${primeroMes.mes} a ${ultimoMes.mes} (pesos)` : "Órdenes liquidadas (pesos)";
 
   /* ---- Grafico de barras: facturacion mensual ---- */
   registrarChart(() => barChart(

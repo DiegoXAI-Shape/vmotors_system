@@ -124,7 +124,7 @@
         <div class="grid g-main" style="align-items:start">
           <article class="card">
             <div class="card-head">
-              <div><h3>Facturación por mes</h3><div class="sub">Órdenes liquidadas · marzo a septiembre 2026</div></div>
+              <div><h3>Facturación por mes</h3><div class="sub" id="rep-rango-meses">Órdenes liquidadas</div></div>
             </div>
             <div class="card-body">
               <div class="chart-holder" id="rep-ingresos"></div>
@@ -148,21 +148,21 @@
             <div class="card-body">
               <div class="stack" style="gap:18px">
                 <div>
-                  <div class="kpi-label">Facturación acumulada (mar-sep)</div>
-                  <div class="kpi-value num">$1,043,350</div>
+                  <div class="kpi-label" id="rp-periodo-label">Facturación acumulada</div>
+                  <div class="kpi-value num" id="rp-facturacion">$0</div>
                 </div>
                 <div class="row" style="gap:30px">
                   <div>
                     <div class="kpi-label">Órdenes cerradas</div>
-                    <div class="kpi-value num" style="font-size:22px">150</div>
+                    <div class="kpi-value num" id="rp-ordenes" style="font-size:22px">0</div>
                   </div>
                   <div>
                     <div class="kpi-label">Ticket promedio</div>
-                    <div class="kpi-value num" style="font-size:22px">$6,955</div>
+                    <div class="kpi-value num" id="rp-ticket" style="font-size:22px">$0</div>
                   </div>
                   <div>
                     <div class="kpi-label">Días promedio en taller</div>
-                    <div class="kpi-value num" style="font-size:22px">1.4</div>
+                    <div class="kpi-value num" id="rp-dias" style="font-size:22px">0</div>
                   </div>
                 </div>
               </div>
@@ -299,6 +299,17 @@ function reporteMensual() {
   ));
 
   hbars(document.getElementById("rep-tipos"), VM.tiposServicio, { sufijo: "" });
+
+  const r = VM.resumenPeriodo;
+  const primero = VM.ingresosMensuales[0], ultimo = VM.ingresosMensuales[VM.ingresosMensuales.length - 1];
+  document.getElementById("rep-rango-meses").textContent =
+    primero && ultimo ? `Órdenes liquidadas · ${primero.mes} a ${ultimo.mes}` : "Órdenes liquidadas";
+  document.getElementById("rp-periodo-label").textContent =
+    primero && ultimo ? `Facturación acumulada (${primero.mes}-${ultimo.mes})` : "Facturación acumulada";
+  document.getElementById("rp-facturacion").textContent = fmt.money(r.facturacion, 0);
+  document.getElementById("rp-ordenes").textContent = r.ordenesCerradas;
+  document.getElementById("rp-ticket").textContent = fmt.money(r.ticketPromedio, 0);
+  document.getElementById("rp-dias").textContent = r.diasPromedioTaller;
 }
 </script>
 </body>

@@ -113,15 +113,31 @@ Con eso el sistema completo queda en `http://127.0.0.1:8000`. El script
 `scripts/iniciar.ps1` en la raíz hace estos pasos automáticamente y además
 levanta el túnel de `cloudflared` para compartirlo por internet.
 
+**Pruebas** (`backend/tests/`): cubren las reglas de negocio de la API —
+login y límite de intentos, validación de datos, traslapes de citas,
+reutilización de expediente en recepción, avance de etapas de una orden,
+recálculo de costos y los límites de qué se puede editar o borrar. Corren
+contra una base de datos temporal, nunca contra `vmotors.db`.
+
+```bash
+cd backend
+pip install -r requirements.txt -r requirements-dev.txt
+pytest
+```
+
 | Endpoint | Qué hace |
 |---|---|
 | `POST /api/auth/login`, `/logout`, `GET /me` | Sesión del administrador (con límite de 5 intentos fallidos cada 15 min) |
 | `GET /api/clientes`, `/vehiculos`, `/citas`, `/refacciones` | Catálogos completos |
 | `GET /api/clientes/buscar`, `/vehiculos/buscar` | Localiza un cliente por teléfono/RFC o un vehículo por placas (cliente recurrente) |
 | `POST /api/clientes`, `/vehiculos`, `/citas` | Altas sueltas, con validación de formato y de traslapes |
+| `PATCH /api/clientes/{id}`, `/vehiculos/{id}` | Edición de un expediente ya existente |
+| `DELETE /api/vehiculos/{id}` | Baja de una unidad (rechazada si tiene citas/órdenes en su historial) |
+| `PATCH /api/citas/{id}` | Cancelar o reprogramar una cita (revalida traslapes si cambia fecha/hora) |
 | `POST /api/recepcion` | Formato F-01 completo: cliente + vehículo + cita + orden en una sola operación |
 | `GET /api/ordenes` | Órdenes vigentes (abiertas + entregadas en los últimos 30 días), con su desglose de refacciones e historial de estatus anidado |
 | `PATCH /api/ordenes/{id}` | Diagnóstico, mano de obra y cambio de estatus (valida que el flujo avance una sola etapa y que haya costo antes de "Entregado") |
+| `DELETE /api/ordenes/{id}` | Borra una orden creada por error (solo en etapa Pendiente/Recibido; más allá de eso se corrige, no se borra) |
 | `POST/DELETE /api/ordenes/{id}/refacciones/...` | Agregar o quitar refacciones de una orden, recalculando costos |
 | `GET /api/ordenes_historicas` | Ledger completo de órdenes ya entregadas (para reportes e historial por placa) |
 | `GET /api/alertas` | Unidades con 6+ meses sin visita |
@@ -165,18 +181,21 @@ PostgreSQL; el esquema de SQLite es el mismo modelo, adaptado en
 ## 4. Estado del proyecto
 
 Sistema funcional de un solo nivel de usuario: interfaz + backend + base de
-datos, con sesión real, datos en vivo en las 12 pantallas y las operaciones
+datos, con sesión real, datos en vivo en las 12 pantallas, las operaciones
 del día a día (recepción, agenda, Kanban, cierre de orden) escribiendo de
-verdad en la base de datos con las mismas reglas de negocio que estaban
-documentadas en el esquema original.
+verdad en la base de datos, edición/cancelación de lo ya creado (cliente,
+vehículo, cita, y una orden recién creada por error), paginación real en las
+tablas largas (clientes, vehículos, órdenes, alertas), exportación a CSV
+donde tenía sentido, los indicadores de "Resumen mensual" calculados sobre
+datos reales (ya no hay números fijos en ninguna pantalla), y una suite de
+pruebas automatizadas (`backend/tests/`) que cubre las reglas de negocio.
 
-Pendiente, como siguientes etapas:
-
-1. Paginación real en las tablas más largas (clientes, vehículos, alertas);
-   hoy se muestran completas porque el volumen de datos de la demo es
-   modesto.
-2. Cuando el taller lo requiera, sumar roles adicionales (mecánicos) sobre
-   la misma base — hoy es deliberadamente un solo nivel de acceso.
+Deliberadamente fuera de alcance, porque no tienen un concepto de negocio
+real detrás en el modelo de datos actual: enviar el comprobante por correo,
+imprimir a PDF desde el servidor, programar el envío de un reporte o
+guardar un borrador de recepción. Y, como siguiente etapa mayor: cuando el
+taller lo requiera, sumar roles adicionales (mecánicos) sobre la misma
+base — hoy es deliberadamente un solo nivel de acceso.
 3. Si el sistema deja de vivir en una laptop + túnel, mover el despliegue a
    un servidor propio (el backend ya es un proceso WSGI/ASGI estándar, no
    depende de `cloudflared` para funcionar).

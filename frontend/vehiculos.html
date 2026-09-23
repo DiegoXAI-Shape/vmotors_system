@@ -27,6 +27,7 @@
             <button class="is-active" data-vista="tarjetas">Tarjetas</button>
             <button data-vista="tabla">Tabla</button>
           </div>
+          <button class="btn" id="btn-exportar-vehiculos">Exportar</button>
           <a class="btn btn-primary" href="recepcion.html">Registrar unidad</a>
         </div>
       </div>
@@ -62,6 +63,11 @@
         </div>
       </article>
 
+      <div class="card-foot" style="border:none;padding:10px 2px">
+        <span></span>
+        <div class="pagination" id="pag-vehiculos"></div>
+      </div>
+
     </main>
   </div>
 </div>
@@ -77,9 +83,15 @@
       <button class="btn btn-ghost btn-icon" data-modal-close><span data-icon="cerrar"></span></button>
     </div>
     <div class="modal-body" id="mh-body"></div>
-    <div class="modal-foot">
+    <div class="modal-foot" id="mh-foot-ver">
       <button class="btn" data-modal-close>Cerrar</button>
+      <button class="btn" id="btn-eliminar-vehiculo">Eliminar</button>
+      <button class="btn" id="btn-editar-vehiculo">Editar</button>
       <a class="btn btn-primary" href="reportes.html">Reporte por placa</a>
+    </div>
+    <div class="modal-foot" id="mh-foot-editar" hidden>
+      <button class="btn" id="btn-cancelar-edicion-veh">Cancelar</button>
+      <button class="btn btn-primary" id="btn-guardar-vehiculo">Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -89,20 +101,30 @@
 <script>
 let filtroMarca = "todas";
 let consulta = "";
+let paginadorVehiculos;
+let vehiculoActual = null;
+const POR_PAGINA_VEH = 12;
 
 function initPagina() {
-  pintar();
+  paginadorVehiculos = crearPaginador({
+    contenedor: document.getElementById("pag-vehiculos"),
+    porPagina: POR_PAGINA_VEH,
+    onCambio: pintar,
+  });
+  paginadorVehiculos.actualizar(visibles().length);
 
   document.getElementById("q").addEventListener("input", (e) => {
     consulta = e.target.value.trim().toLowerCase();
-    pintar();
+    paginadorVehiculos.actualizar(visibles().length);
   });
 
   document.getElementById("filtro-marca").addEventListener("click", (e) => {
     const b = e.target.closest("button");
     if (!b) return;
+    document.querySelectorAll("#filtro-marca button").forEach(x => x.classList.remove("is-active"));
+    b.classList.add("is-active");
     filtroMarca = b.dataset.marca;
-    pintar();
+    paginadorVehiculos.actualizar(visibles().length);
   });
 
   document.getElementById("vista").addEventListener("click", (e) => {
@@ -117,6 +139,28 @@ function initPagina() {
     const b = e.target.closest("[data-hist]");
     if (b) abrirHistorial(+b.dataset.hist);
   });
+
+  document.getElementById("btn-editar-vehiculo").addEventListener("click", () => {
+    pintarEdicionVehiculo(vehiculoActual);
+    document.getElementById("mh-foot-ver").hidden = true;
+    document.getElementById("mh-foot-editar").hidden = false;
+  });
+  document.getElementById("btn-cancelar-edicion-veh").addEventListener("click", () => {
+    abrirHistorial(vehiculoActual);
+  });
+  document.getElementById("btn-guardar-vehiculo").addEventListener("click", guardarEdicionVehiculo);
+  document.getElementById("btn-eliminar-vehiculo").addEventListener("click", eliminarVehiculo);
+
+  document.getElementById("btn-exportar-vehiculos").addEventListener("click", () => {
+    exportarCSV("vmotors-vehiculos.csv",
+      [
+        { clave: "placas", titulo: "Placas" }, { clave: "marca", titulo: "Marca" },
+        { clave: "modelo", titulo: "Modelo" }, { clave: "anio", titulo: "Año" },
+        { clave: "color", titulo: "Color" }, { clave: "transmision", titulo: "Transmisión" },
+        { clave: "motor", titulo: "Motor" }, { clave: "propietario", titulo: "Propietario" },
+      ],
+      visibles().map(v => ({ ...v, propietario: VM.nombreCliente(VM.cliente(v.id_cliente)) })));
+  });
 }
 
 function visibles() {
@@ -127,10 +171,11 @@ function visibles() {
   });
 }
 
-function pintar() {
-  const lista = visibles();
+function pintar(pagina) {
+  const todos = visibles();
   document.getElementById("conteo").textContent =
-    `${lista.length} de ${VM.vehiculos.length} unidades`;
+    `${todos.length} de ${VM.vehiculos.length} unidades`;
+  const lista = todos.slice((pagina - 1) * POR_PAGINA_VEH, pagina * POR_PAGINA_VEH);
 
   document.getElementById("grid-vehiculos").innerHTML = lista.map(v => {
     const cl = VM.cliente(v.id_cliente);
@@ -184,6 +229,9 @@ function pintar() {
 }
 
 function abrirHistorial(id) {
+  vehiculoActual = id;
+  document.getElementById("mh-foot-ver").hidden = false;
+  document.getElementById("mh-foot-editar").hidden = true;
   const v = VM.vehiculo(id);
   const cl = VM.cliente(v.id_cliente);
   const citas = VM.citasDeVehiculo(id).sort((a, b) => b.fecha.localeCompare(a.fecha));
@@ -229,6 +277,68 @@ function abrirHistorial(id) {
     </div>`;
 
   document.getElementById("modal-hist").classList.add("is-open");
+}
+
+/* -------------------- Edición del vehículo -------------------- */
+function pintarEdicionVehiculo(id) {
+  const v = VM.vehiculo(id);
+  document.getElementById("mh-body").innerHTML = `
+    <div class="field-grid fg-3" style="margin-bottom:10px">
+      <div class="field"><label>Placas</label><input class="input mono" id="ve-placas" value="${v.placas}" style="text-transform:uppercase"></div>
+      <div class="field"><label>Marca</label><input class="input" id="ve-marca" value="${v.marca}"></div>
+      <div class="field"><label>Modelo</label><input class="input" id="ve-modelo" value="${v.modelo}"></div>
+      <div class="field"><label>Año</label><input class="input num" type="number" id="ve-anio" value="${v.anio}"></div>
+      <div class="field"><label>Color</label><input class="input" id="ve-color" value="${v.color || ""}"></div>
+      <div class="field"><label>Motor</label><input class="input" id="ve-motor" value="${v.motor || ""}"></div>
+      <div class="field">
+        <label>Transmisión</label>
+        <select class="select" id="ve-transmision">
+          <option value="Manual" ${v.transmision === "Manual" ? "selected" : ""}>Manual</option>
+          <option value="Automático" ${v.transmision === "Automático" ? "selected" : ""}>Automático</option>
+        </select>
+      </div>
+    </div>
+    <div id="aviso-edicion-veh"></div>`;
+}
+
+async function guardarEdicionVehiculo() {
+  const btn = document.getElementById("btn-guardar-vehiculo");
+  const aviso = document.getElementById("aviso-edicion-veh");
+  btn.classList.add("is-disabled");
+  try {
+    await vmApi("PATCH", `/api/vehiculos/${vehiculoActual}`, {
+      placas: document.getElementById("ve-placas").value.trim().toUpperCase(),
+      marca: document.getElementById("ve-marca").value.trim(),
+      modelo: document.getElementById("ve-modelo").value.trim(),
+      anio: Number(document.getElementById("ve-anio").value),
+      color: document.getElementById("ve-color").value.trim() || null,
+      transmision: document.getElementById("ve-transmision").value,
+      motor: document.getElementById("ve-motor").value.trim() || null,
+    });
+    await vmCargarDatos();
+    paginadorVehiculos.actualizar(visibles().length);
+    abrirHistorial(vehiculoActual);
+    toast("Vehículo actualizado correctamente.", "ok");
+  } catch (err) {
+    aviso.innerHTML = `<div class="alert alert-danger">${icon("alerta")}<div>${err.message}</div></div>`;
+    initIcons(aviso);
+  } finally {
+    btn.classList.remove("is-disabled");
+  }
+}
+
+async function eliminarVehiculo() {
+  const v = VM.vehiculo(vehiculoActual);
+  if (!confirm(`¿Eliminar la unidad ${v.placas} (${v.marca} ${v.modelo})? Esta acción no se puede deshacer.`)) return;
+  try {
+    await vmApi("DELETE", `/api/vehiculos/${vehiculoActual}`);
+    await vmCargarDatos();
+    paginadorVehiculos.actualizar(visibles().length);
+    document.getElementById("modal-hist").classList.remove("is-open");
+    toast("Vehículo eliminado del padrón.", "ok");
+  } catch (err) {
+    toast(err.message, "danger");
+  }
 }
 </script>
 </body>

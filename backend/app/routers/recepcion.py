@@ -67,7 +67,7 @@ def recibir_unidad(datos: RecepcionIn):
         v = datos.visita
         ocupado = con.execute(
             """SELECT id_cita FROM citas
-                WHERE fecha = ? AND hora_inicio = ? AND estatus_cita <> 'Cancelada'""",
+                WHERE fecha = ? AND substr(hora_inicio, 1, 5) = ? AND estatus_cita <> 'Cancelada'""",
             (v.fecha.isoformat(), v.hora_inicio),
         ).fetchone()
         if ocupado:

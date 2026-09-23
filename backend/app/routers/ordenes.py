@@ -226,3 +226,32 @@ def quitar_refaccion(id_orden: int, id_detalle: int):
         return {"ok": True, "costo_total": nuevo_total}
     finally:
         con.close()
+
+
+ETAPAS_ELIMINABLES = ("Pendiente", "Recibido")
+
+
+@router.delete("/ordenes/{id_orden}")
+def eliminar_orden(id_orden: int):
+    """Solo permite borrar una orden recien creada por error (todavia sin
+    diagnostico ni trabajo registrado). Mas alla de esas dos primeras etapas
+    la orden es un registro real del taller y se corrige, no se borra. La
+    cita que la origino se cancela para liberar su bloque en la agenda."""
+    con = get_connection()
+    try:
+        actual = _orden_o_404(con, id_orden)
+        if actual["estatus"] not in ETAPAS_ELIMINABLES:
+            raise HTTPException(
+                409,
+                f"No se puede eliminar una orden en etapa '{actual['estatus']}'. Solo se permite "
+                f"en {' o '.join(ETAPAS_ELIMINABLES)}, antes de registrar diagnóstico o trabajo; "
+                "para etapas posteriores corrija los datos desde la orden en vez de borrarla.",
+            )
+        con.execute("DELETE FROM historial_estatus WHERE id_orden = ?", (id_orden,))
+        con.execute("DELETE FROM orden_refacciones WHERE id_orden = ?", (id_orden,))
+        con.execute("UPDATE citas SET estatus_cita = 'Cancelada' WHERE id_cita = ?", (actual["id_cita"],))
+        con.execute("DELETE FROM ordenes_servicio WHERE id_orden = ?", (id_orden,))
+        con.commit()
+        return {"ok": True}
+    finally:
+        con.close()

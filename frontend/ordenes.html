@@ -23,7 +23,7 @@
           <p>Cada orden nace de una cita confirmada (relación 1 a 1) y concentra el diagnóstico técnico, las refacciones instaladas y el costo final a cobrar.</p>
         </div>
         <div class="page-actions">
-          <button class="btn" data-demo="Exportación a CSV (demostración).">Exportar</button>
+          <button class="btn" id="btn-exportar-ordenes">Exportar</button>
           <a class="btn btn-primary" href="recepcion.html">Abrir orden</a>
         </div>
       </div>
@@ -51,9 +51,9 @@
         <div class="toolbar">
           <div class="search" style="width:300px">
             <span data-icon="buscar"></span>
-            <input type="search" placeholder="Folio, placa o cliente" data-search-target="#tabla-ordenes">
+            <input type="search" id="q-ordenes" placeholder="Folio, placa o cliente">
           </div>
-          <div class="seg" data-filter-target="#tabla-ordenes tbody">
+          <div class="seg" id="filtro-estatus-ordenes">
             <button class="is-active" data-value="todos">Todas</button>
             <button data-value="Pendiente">Pendientes</button>
             <button data-value="En reparación">En reparación</button>
@@ -79,12 +79,8 @@
         </div>
 
         <div class="card-foot">
-          <span>Órdenes activas e históricas del mes en curso</span>
-          <div class="pagination">
-            <button>‹</button><button class="is-active">1</button>
-            <button data-demo="Paginación (demostración).">2</button>
-            <button data-demo="Paginación (demostración).">›</button>
-          </div>
+          <span>Mostrando <strong id="n-mostrados-ordenes">0</strong> de <strong id="n-total-ordenes">0</strong> órdenes</span>
+          <div class="pagination" id="pag-ordenes"></div>
         </div>
       </article>
 
@@ -95,6 +91,11 @@
 <script src="assets/js/data.js"></script>
 <script src="assets/js/app.js"></script>
 <script>
+let consultaOrdenes = "";
+let filtroEstatusOrdenes = "todos";
+let paginadorOrdenes;
+const POR_PAGINA_ORD = 12;
+
 function initPagina() {
   const ordenes = VM.ordenesExpandidas();
   const cobrado = ordenes.filter(o => o.estatus === "Entregado").reduce((s, o) => s + o.costo_total, 0);
@@ -105,10 +106,62 @@ function initPagina() {
   document.getElementById("k-proceso").textContent = fmt.money(proceso, 0);
   document.getElementById("k-cobrado").textContent = fmt.money(cobrado, 0);
   document.getElementById("k-ticket").textContent  =
-    fmt.money(conCosto.reduce((s, o) => s + o.costo_total, 0) / conCosto.length, 0);
+    fmt.money(conCosto.length ? conCosto.reduce((s, o) => s + o.costo_total, 0) / conCosto.length : 0, 0);
 
-  document.getElementById("tbody-ordenes").innerHTML = ordenes
-    .sort((a, b) => b.fecha_ingreso.localeCompare(a.fecha_ingreso))
+  paginadorOrdenes = crearPaginador({
+    contenedor: document.getElementById("pag-ordenes"),
+    porPagina: POR_PAGINA_ORD,
+    onCambio: pintarTablaOrdenes,
+  });
+  paginadorOrdenes.actualizar(ordenesFiltradas().length);
+
+  document.getElementById("q-ordenes").addEventListener("input", (e) => {
+    consultaOrdenes = e.target.value.trim().toLowerCase();
+    paginadorOrdenes.actualizar(ordenesFiltradas().length);
+  });
+
+  document.getElementById("filtro-estatus-ordenes").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    document.querySelectorAll("#filtro-estatus-ordenes button").forEach(x => x.classList.remove("is-active"));
+    b.classList.add("is-active");
+    filtroEstatusOrdenes = b.dataset.value;
+    paginadorOrdenes.actualizar(ordenesFiltradas().length);
+  });
+
+  document.getElementById("btn-exportar-ordenes").addEventListener("click", () => {
+    exportarCSV("vmotors-ordenes.csv",
+      [
+        { clave: "folio", titulo: "Folio" }, { clave: "placas", titulo: "Placas" },
+        { clave: "unidad", titulo: "Unidad" }, { clave: "cliente", titulo: "Cliente" },
+        { clave: "fecha_ingreso", titulo: "Ingreso" }, { clave: "estatus", titulo: "Estatus" },
+        { clave: "costo_total", titulo: "Importe" },
+      ],
+      ordenesFiltradas().map(o => ({
+        ...o, placas: o.vehiculo.placas, unidad: `${o.vehiculo.marca} ${o.vehiculo.modelo}`,
+        cliente: VM.nombreCliente(o.cliente),
+      })));
+  });
+}
+
+function ordenesFiltradas() {
+  return VM.ordenesExpandidas()
+    .filter(o => filtroEstatusOrdenes === "todos" || o.estatus === filtroEstatusOrdenes)
+    .filter(o => {
+      if (!consultaOrdenes) return true;
+      const texto = `${o.folio} ${o.vehiculo.placas} ${VM.nombreCliente(o.cliente)}`.toLowerCase();
+      return texto.includes(consultaOrdenes);
+    })
+    .sort((a, b) => b.fecha_ingreso.localeCompare(a.fecha_ingreso));
+}
+
+function pintarTablaOrdenes(pagina) {
+  const todas = ordenesFiltradas();
+  const lista = todas.slice((pagina - 1) * POR_PAGINA_ORD, pagina * POR_PAGINA_ORD);
+  document.getElementById("n-mostrados-ordenes").textContent = lista.length;
+  document.getElementById("n-total-ordenes").textContent = todas.length;
+
+  document.getElementById("tbody-ordenes").innerHTML = lista
     .map(o => `<tr data-estatus="${o.estatus}">
       <td class="folio nowrap">${o.folio}</td>
       <td>

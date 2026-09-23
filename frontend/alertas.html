@@ -23,7 +23,7 @@
           <p>Listado priorizado de clientes cuyos vehículos cumplieron seis meses o más desde su última visita registrada. Sirve de base para llamadas y recordatorios proactivos de afinación y frenos.</p>
         </div>
         <div class="page-actions">
-          <button class="btn" data-demo="Listado exportado (demostración).">Exportar listado</button>
+          <button class="btn" id="btn-exportar-alertas">Exportar listado</button>
           <button class="btn btn-primary" data-demo="Campaña de recordatorios enviada (demostración).">Enviar recordatorios</button>
         </div>
       </div>
@@ -52,9 +52,9 @@
           <div class="toolbar">
             <div class="search" style="width:280px">
               <span data-icon="buscar"></span>
-              <input type="search" placeholder="Placa o propietario" data-search-target="#tabla-alertas">
+              <input type="search" id="q-alertas" placeholder="Placa o propietario">
             </div>
-            <div class="seg" data-filter-target="#tabla-alertas tbody">
+            <div class="seg" id="filtro-prioridad">
               <button class="is-active" data-value="todos">Todas</button>
               <button data-value="alta">Alta</button>
               <button data-value="media">Media</button>
@@ -73,8 +73,8 @@
             </table>
           </div>
           <div class="card-foot">
-            <span>Regla aplicada: <strong>última visita &gt; 6 meses</strong> respecto al 10/09/2026</span>
-            <span class="dim">Actualizado automáticamente cada día</span>
+            <span>Regla aplicada: <strong>última visita &gt; 6 meses</strong> respecto a hoy</span>
+            <div class="pagination" id="pag-alertas"></div>
           </div>
         </article>
 
@@ -132,6 +132,11 @@ const PRIORIDAD = {
   baja:  { cls: "st-recibido", label: "Baja"  }
 };
 
+let consultaAlertas = "";
+let filtroPrioridad = "todos";
+let paginadorAlertas;
+const POR_PAGINA_ALT = 15;
+
 function initPagina() {
   const cuenta = (p) => VM.alertas.filter(a => a.prioridad === p).length;
   document.getElementById("k-alta").textContent  = cuenta("alta");
@@ -142,8 +147,58 @@ function initPagina() {
     return VM.cliente(v.id_cliente).acepta_promociones;
   }).length;
 
-  document.getElementById("tbody-alertas").innerHTML = VM.alertas
-    .sort((a, b) => b.meses - a.meses)
+  paginadorAlertas = crearPaginador({
+    contenedor: document.getElementById("pag-alertas"),
+    porPagina: POR_PAGINA_ALT,
+    onCambio: pintarTablaAlertas,
+  });
+  paginadorAlertas.actualizar(alertasFiltradas().length);
+
+  document.getElementById("q-alertas").addEventListener("input", (e) => {
+    consultaAlertas = e.target.value.trim().toLowerCase();
+    paginadorAlertas.actualizar(alertasFiltradas().length);
+  });
+
+  document.getElementById("filtro-prioridad").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    document.querySelectorAll("#filtro-prioridad button").forEach(x => x.classList.remove("is-active"));
+    b.classList.add("is-active");
+    filtroPrioridad = b.dataset.value;
+    paginadorAlertas.actualizar(alertasFiltradas().length);
+  });
+
+  document.getElementById("btn-exportar-alertas").addEventListener("click", () => {
+    exportarCSV("vmotors-alertas.csv",
+      [
+        { clave: "prioridad", titulo: "Prioridad" }, { clave: "placas", titulo: "Placas" },
+        { clave: "unidad", titulo: "Unidad" }, { clave: "propietario", titulo: "Propietario" },
+        { clave: "telefono", titulo: "Teléfono" }, { clave: "ultima_visita", titulo: "Última visita" },
+        { clave: "meses", titulo: "Meses sin visita" },
+      ],
+      alertasFiltradas().map(a => {
+        const v = VM.vehiculo(a.id_vehiculo), cl = VM.cliente(v.id_cliente);
+        return { ...a, placas: v.placas, unidad: `${v.marca} ${v.modelo}`, propietario: VM.nombreCliente(cl), telefono: cl.telefono };
+      }));
+  });
+}
+
+function alertasFiltradas() {
+  return VM.alertas
+    .filter(a => filtroPrioridad === "todos" || a.prioridad === filtroPrioridad)
+    .filter(a => {
+      if (!consultaAlertas) return true;
+      const v = VM.vehiculo(a.id_vehiculo), cl = VM.cliente(v.id_cliente);
+      return `${v.placas} ${VM.nombreCliente(cl)}`.toLowerCase().includes(consultaAlertas);
+    })
+    .sort((a, b) => b.meses - a.meses);
+}
+
+function pintarTablaAlertas(pagina) {
+  const todas = alertasFiltradas();
+  const lista = todas.slice((pagina - 1) * POR_PAGINA_ALT, pagina * POR_PAGINA_ALT);
+
+  document.getElementById("tbody-alertas").innerHTML = lista
     .map(a => {
       const v  = VM.vehiculo(a.id_vehiculo);
       const cl = VM.cliente(v.id_cliente);

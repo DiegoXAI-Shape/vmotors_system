@@ -53,6 +53,7 @@ VM.ordenes_historicas = [];
 VM.ingresosMensuales = [];
 VM.serviciosPorSemana = [];
 VM.tiposServicio = [];
+VM.resumenPeriodo = { facturacion: 0, ordenesCerradas: 0, ticketPromedio: 0, diasPromedioTaller: 0 };
 VM.alertas = [];
 
 /* -------------------------------------------------------------------------
@@ -116,6 +117,7 @@ async function vmCargarDatos() {
   VM.ingresosMensuales = tablero.ingresosMensuales;
   VM.serviciosPorSemana = tablero.serviciosPorSemana;
   VM.tiposServicio = tablero.tiposServicio;
+  VM.resumenPeriodo = tablero.resumenPeriodo;
 }
 
 /* VM.listo: promesa que el resto de la app espera antes de pintar nada.

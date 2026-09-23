@@ -40,6 +40,7 @@ const ICONS = {
   arriba:    '<path d="M12 19V5M5 12l7-7 7 7"/>',
   abajo:     '<path d="M12 5v14M19 12l-7 7-7-7"/>',
   usuario:   '<circle cx="12" cy="8" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
+  menu:      '<path d="M4 6h16M4 12h16M4 18h16"/>',
   candado:   '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
   llaveInv:  '<circle cx="8" cy="12" r="3.5"/><path d="M11.5 12H21l-1.5 2M17 12v3"/>',
   refaccion: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 14.1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 9.9 3H10a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1.3Z"/>'
@@ -184,6 +185,7 @@ function renderShell() {
   const crumb  = document.body.dataset.crumb || "VMotors";
   top.className = "topbar";
   top.innerHTML = `
+    <button class="nav-toggle" id="btn-nav-toggle" aria-label="Abrir menú">${icon("menu")}</button>
     <div class="topbar-titles">
       <div class="crumb">${crumb}</div>
       <h1>${titulo}</h1>
@@ -201,6 +203,25 @@ function renderShell() {
         <div class="u-role">Taller VMotors</div>
       </div>
     </div>`;
+
+  initMenuMovil(aside);
+}
+
+/* Cajon de navegacion en pantallas angostas: la barra lateral (oculta por
+   CSS bajo los 900px) se abre como panel deslizante sobre un fondo oscuro. */
+function initMenuMovil(aside) {
+  let fondo = document.querySelector(".sidebar-backdrop");
+  if (!fondo) {
+    fondo = document.createElement("div");
+    fondo.className = "sidebar-backdrop";
+    document.body.appendChild(fondo);
+  }
+  const cerrar = () => { aside.classList.remove("is-open"); fondo.classList.remove("is-open"); };
+  const abrir  = () => { aside.classList.add("is-open"); fondo.classList.add("is-open"); };
+
+  document.getElementById("btn-nav-toggle").addEventListener("click", abrir);
+  fondo.addEventListener("click", cerrar);
+  aside.querySelectorAll(".nav-item").forEach(a => a.addEventListener("click", cerrar));
 }
 
 /* -------------------------------------------------------------------------
@@ -244,6 +265,81 @@ function initDemoActions() {
     ev.preventDefault();
     toast(el.dataset.demo || "Acción de demostración: el prototipo no guarda información.");
   });
+}
+
+/* -------------------------------------------------------------------------
+   Exportar a CSV (columnas: [{clave, titulo}], filas: arreglo de objetos)
+   ------------------------------------------------------------------------- */
+function exportarCSV(nombreArchivo, columnas, filas) {
+  const escapar = (v) => {
+    const s = v === null || v === undefined ? "" : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const encabezado = columnas.map(c => escapar(c.titulo)).join(",");
+  const cuerpo = filas.map(f => columnas.map(c => escapar(f[c.clave])).join(",")).join("\n");
+  const csv = "﻿" + encabezado + "\n" + cuerpo;   // BOM para que Excel respete acentos
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombreArchivo;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* -------------------------------------------------------------------------
+   Paginacion de tablas en el cliente
+   ------------------------------------------------------------------------- */
+/**
+ * Gobierna la paginacion de una lista ya renderizada en HTML.
+ * @param {Object} opts
+ * @param {HTMLElement} opts.contenedor   elemento .pagination donde se dibujan los controles
+ * @param {Function} opts.onCambio        (paginaActual) => void, pinta la pagina indicada
+ * @param {number} opts.porPagina
+ * @returns {{ actualizar(totalItems): void, pagina: number }}
+ */
+function crearPaginador({ contenedor, onCambio, porPagina }) {
+  const estado = { pagina: 1, total: 0 };
+
+  function totalPaginas() { return Math.max(1, Math.ceil(estado.total / porPagina)); }
+
+  function pintarControles() {
+    const tp = totalPaginas();
+    const p = estado.pagina;
+    const botones = [];
+    botones.push(`<button data-p="${p - 1}" ${p <= 1 ? "disabled" : ""}>‹</button>`);
+    for (let i = 1; i <= tp; i++) {
+      if (tp > 7 && i !== 1 && i !== tp && Math.abs(i - p) > 1) {
+        if (i === 2 || i === tp - 1) botones.push(`<button disabled>…</button>`);
+        continue;
+      }
+      botones.push(`<button data-p="${i}" class="${i === p ? "is-active" : ""}">${i}</button>`);
+    }
+    botones.push(`<button data-p="${p + 1}" ${p >= tp ? "disabled" : ""}>›</button>`);
+    contenedor.innerHTML = botones.join("");
+    contenedor.querySelectorAll("[data-p]").forEach(b => {
+      b.addEventListener("click", () => irA(Number(b.dataset.p)));
+    });
+  }
+
+  function irA(p) {
+    const tp = totalPaginas();
+    estado.pagina = Math.min(Math.max(1, p), tp);
+    pintarControles();
+    onCambio(estado.pagina);
+  }
+
+  function actualizar(totalItems) {
+    estado.total = totalItems;
+    if (estado.pagina > totalPaginas()) estado.pagina = 1;
+    pintarControles();
+    onCambio(estado.pagina);
+  }
+
+  return { actualizar, get pagina() { return estado.pagina; } };
 }
 
 /* -------------------------------------------------------------------------
