@@ -61,9 +61,12 @@
             <button data-value="Entregado">Entregadas</button>
           </div>
           <div style="flex:1 1 auto"></div>
-          <button class="btn btn-sm" data-demo="Filtros avanzados (demostración).">
-            <span data-icon="filtro"></span> Rango de fechas
-          </button>
+          <div class="row" style="gap:6px">
+            <input class="input" type="date" id="f-desde" title="Ingreso desde" style="width:150px">
+            <span class="dim" style="font-size:12px">a</span>
+            <input class="input" type="date" id="f-hasta" title="Ingreso hasta" style="width:150px">
+            <button class="btn btn-sm" id="btn-limpiar-rango" title="Quitar rango de fechas">&times;</button>
+          </div>
         </div>
 
         <div class="table-wrap">
@@ -93,6 +96,8 @@
 <script>
 let consultaOrdenes = "";
 let filtroEstatusOrdenes = "todos";
+let filtroDesde = "";
+let filtroHasta = "";
 let paginadorOrdenes;
 const POR_PAGINA_ORD = 12;
 
@@ -129,6 +134,21 @@ function initPagina() {
     paginadorOrdenes.actualizar(ordenesFiltradas().length);
   });
 
+  document.getElementById("f-desde").addEventListener("change", (e) => {
+    filtroDesde = e.target.value;
+    paginadorOrdenes.actualizar(ordenesFiltradas().length);
+  });
+  document.getElementById("f-hasta").addEventListener("change", (e) => {
+    filtroHasta = e.target.value;
+    paginadorOrdenes.actualizar(ordenesFiltradas().length);
+  });
+  document.getElementById("btn-limpiar-rango").addEventListener("click", () => {
+    filtroDesde = ""; filtroHasta = "";
+    document.getElementById("f-desde").value = "";
+    document.getElementById("f-hasta").value = "";
+    paginadorOrdenes.actualizar(ordenesFiltradas().length);
+  });
+
   document.getElementById("btn-exportar-ordenes").addEventListener("click", () => {
     exportarCSV("vmotors-ordenes.csv",
       [
@@ -147,6 +167,8 @@ function initPagina() {
 function ordenesFiltradas() {
   return VM.ordenesExpandidas()
     .filter(o => filtroEstatusOrdenes === "todos" || o.estatus === filtroEstatusOrdenes)
+    .filter(o => !filtroDesde || o.fecha_ingreso.slice(0, 10) >= filtroDesde)
+    .filter(o => !filtroHasta || o.fecha_ingreso.slice(0, 10) <= filtroHasta)
     .filter(o => {
       if (!consultaOrdenes) return true;
       const texto = `${o.folio} ${o.vehiculo.placas} ${VM.nombreCliente(o.cliente)}`.toLowerCase();

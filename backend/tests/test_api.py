@@ -319,3 +319,49 @@ def test_eliminar_orden_avanzada_bloqueado(auth):
     auth.patch(f"/api/ordenes/{id_orden}", json={"estatus": "En diagnóstico"})
     r = auth.delete(f"/api/ordenes/{id_orden}")
     assert r.status_code == 409
+
+
+# ===========================================================================
+# Tablero / reportes
+# ===========================================================================
+
+def test_dashboard_rango_por_omision(auth):
+    r = auth.get("/api/dashboard")
+    assert r.status_code == 200
+    datos = r.json()
+    assert len(datos["ingresosMensuales"]) == 7
+    assert "resumenPeriodo" in datos
+
+
+def test_dashboard_rango_de_12_meses(auth):
+    r = auth.get("/api/dashboard", params={"meses": 13})
+    assert r.status_code == 200
+    assert len(r.json()["ingresosMensuales"]) == 13
+
+
+# ===========================================================================
+# Reportes en PDF
+# ===========================================================================
+
+def test_reporte_diario_pdf(auth):
+    r = auth.get("/api/reportes/diario.pdf")
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "application/pdf"
+    assert r.content[:4] == b"%PDF"
+
+
+def test_reporte_placa_pdf(auth, vehiculo_id):
+    r = auth.get(f"/api/reportes/placa/{vehiculo_id}.pdf")
+    assert r.status_code == 200
+    assert r.content[:4] == b"%PDF"
+
+
+def test_reporte_placa_pdf_vehiculo_inexistente_404(auth):
+    r = auth.get("/api/reportes/placa/9999.pdf")
+    assert r.status_code == 404
+
+
+def test_reporte_mensual_pdf(auth):
+    r = auth.get("/api/reportes/mensual.pdf")
+    assert r.status_code == 200
+    assert r.content[:4] == b"%PDF"

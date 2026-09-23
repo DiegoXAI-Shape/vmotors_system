@@ -23,14 +23,15 @@
           <p>Cada bloque representa una bahía comprometida. El sistema impide registrar dos servicios activos en el mismo par de fecha y hora de inicio.</p>
         </div>
         <div class="page-actions">
-          <div class="seg">
-            <button data-demo="Vista de día (demostración).">Día</button>
-            <button class="is-active">Semana</button>
-            <button data-demo="Vista de mes (demostración).">Mes</button>
+          <div class="seg" id="seg-vista">
+            <button data-vista="dia">Día</button>
+            <button class="is-active" data-vista="semana">Semana</button>
+            <button data-vista="mes">Mes</button>
           </div>
-          <button class="btn btn-icon" data-demo="Semana anterior (demostración).">‹</button>
-          <button class="btn btn-icon" data-demo="Semana siguiente (demostración).">›</button>
-          <button class="btn btn-primary" data-modal-open="modal-cita">Nueva cita</button>
+          <button class="btn btn-icon" id="btn-periodo-prev" title="Anterior">‹</button>
+          <button class="btn btn-icon" id="btn-periodo-next" title="Siguiente">›</button>
+          <button class="btn" id="btn-hoy">Hoy</button>
+          <button class="btn btn-primary" id="btn-nueva-cita">Nueva cita</button>
         </div>
       </div>
 
@@ -40,7 +41,7 @@
           <div class="card-head">
             <div>
               <h3>Ocupación de bahías</h3>
-              <div class="sub">Horario laboral de 08:00 a 18:00 · lunes a sábado</div>
+              <div class="sub" id="sub-horario">Horario laboral de 08:00 a 18:00 · lunes a sábado</div>
             </div>
             <div class="row" style="font-size:11.5px;color:var(--ink-3)">
               <span class="row" style="gap:6px"><span class="kb-swatch" style="background:var(--st-recibido)"></span>Agendada</span>
@@ -52,14 +53,14 @@
             <div class="cal" id="cal"></div>
           </div>
           <div class="card-foot">
-            <span>Bloques ocupados esta semana</span>
+            <span id="etiqueta-ocupacion">Bloques ocupados esta semana</span>
             <strong class="num" id="ocupacion">0</strong>
           </div>
         </article>
 
         <!-- ===================== PANEL E-01 ===================== -->
         <aside class="stack" style="position:sticky;top:90px">
-          <article class="card">
+          <article class="card" id="tarjeta-registrar-cita">
             <div class="card-head">
               <div><h3>Registrar cita</h3><div class="sub">Formulario E-01</div></div>
             </div>
@@ -87,7 +88,7 @@
               </div>
             </div>
             <div class="card-foot" style="justify-content:flex-end;gap:9px">
-              <button class="btn" data-demo="Captura cancelada (demostración).">Cancelar</button>
+              <button class="btn" id="btn-limpiar-form">Cancelar</button>
               <button class="btn btn-primary" id="btn-guardar">Confirmar cita</button>
             </div>
           </article>
@@ -125,25 +126,8 @@
 <script src="assets/js/data.js"></script>
 <script src="assets/js/app.js"></script>
 <script>
-const NOMBRES_DIA = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+const NOMBRES_DIA = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const HORAS = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00"];
-
-/* Semana laboral (lunes a sábado) que contiene a VM.HOY */
-function construirSemana() {
-  const hoy = new Date(VM.HOY + "T12:00:00");
-  const diaSemana = hoy.getDay();                      // 0=domingo .. 6=sábado
-  const offsetLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
-  const lunes = new Date(hoy);
-  lunes.setDate(hoy.getDate() + offsetLunes);
-
-  return NOMBRES_DIA.map((nombre, i) => {
-    const d = new Date(lunes);
-    d.setDate(lunes.getDate() + i);
-    const iso = `${d.getFullYear()}-${_pad(d.getMonth() + 1)}-${_pad(d.getDate())}`;
-    return { iso, nombre };
-  });
-}
-const DIAS_SEMANA = construirSemana();
 
 const COLOR_CITA = {
   "Agendada":  { linea: "var(--st-recibido)",  fondo: "#eaf2fd" },
@@ -151,21 +135,128 @@ const COLOR_CITA = {
   "Cancelada": { linea: "var(--critical)",     fondo: "#fceded" }
 };
 
-function initPagina() {
-  const primero = DIAS_SEMANA[0], ultimo = DIAS_SEMANA[DIAS_SEMANA.length - 1];
-  document.getElementById("titulo-semana").textContent =
-    `Semana del ${fmt.fecha(primero.iso)} al ${fmt.fecha(ultimo.iso)}`;
+/* -------------------------------------------------------------------------
+   Fechas: helpers puros, sin tocar el DOM
+   ------------------------------------------------------------------------- */
+function isoDeFecha(d) {
+  return `${d.getFullYear()}-${_pad(d.getMonth() + 1)}-${_pad(d.getDate())}`;
+}
+function lunesDeSemana(iso) {
+  const d = new Date(iso + "T12:00:00");
+  const dow = d.getDay();                    // 0=domingo .. 6=sábado
+  d.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow));
+  return d;
+}
+function construirSemana(iso) {
+  const lunes = lunesDeSemana(iso);
+  return NOMBRES_DIA.slice(0, 6).map((nombre, i) => {
+    const d = new Date(lunes);
+    d.setDate(lunes.getDate() + i);
+    return { iso: isoDeFecha(d), nombre };
+  });
+}
 
+/* -------------------------------------------------------------------------
+   Estado de la vista (día / semana / mes) y navegacion
+   ------------------------------------------------------------------------- */
+let vistaActual = "semana";
+let fechaAncla = VM.HOY;   // fecha de referencia para cualquiera de las 3 vistas
+
+function initPagina() {
   const inFecha = document.getElementById("in-fecha");
   inFecha.min = VM.HOY;
   inFecha.value = VM.HOY;
 
-  pintarCalendario();
+  pintarVista();
   pintarPanel();
   pintarProximas();
 
+  /* Delegados sobre el contenedor estable del calendario: siguen
+     funcionando aunque pintarVista() vuelva a pintar su interior. */
+  document.getElementById("cal").addEventListener("click", (e) => {
+    const ev = e.target.closest("[data-cita]");
+    if (ev) { abrirDetalle(+ev.dataset.cita); return; }
+    const libre = e.target.closest("[data-hora][data-fecha]");
+    if (libre) { elegirBloqueDesdeCalendario(libre.dataset.fecha, libre.dataset.hora); return; }
+    const dia = e.target.closest("[data-dia]");
+    if (dia) { fechaAncla = dia.dataset.dia; vistaActual = "dia"; sincronizarSegVista(); pintarVista(); }
+  });
+
+  document.getElementById("seg-vista").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-vista]");
+    if (!b) return;
+    vistaActual = b.dataset.vista;
+    sincronizarSegVista();
+    pintarVista();
+  });
+
   document.getElementById("btn-guardar").addEventListener("click", confirmarCita);
   document.getElementById("btn-cancelar-cita").addEventListener("click", cancelarCitaActual);
+  document.getElementById("btn-limpiar-form").addEventListener("click", limpiarFormularioCita);
+  document.getElementById("btn-nueva-cita").addEventListener("click", irARegistrarCita);
+  document.getElementById("btn-periodo-prev").addEventListener("click", () => cambiarPeriodo(-1));
+  document.getElementById("btn-periodo-next").addEventListener("click", () => cambiarPeriodo(1));
+  document.getElementById("btn-hoy").addEventListener("click", () => { fechaAncla = VM.HOY; pintarVista(); });
+}
+
+function sincronizarSegVista() {
+  document.querySelectorAll("#seg-vista button").forEach(b => b.classList.toggle("is-active", b.dataset.vista === vistaActual));
+}
+
+function cambiarPeriodo(delta) {
+  const d = new Date(fechaAncla + "T12:00:00");
+  if (vistaActual === "dia") d.setDate(d.getDate() + delta);
+  else if (vistaActual === "semana") d.setDate(d.getDate() + delta * 7);
+  else d.setMonth(d.getMonth() + delta);
+  fechaAncla = isoDeFecha(d);
+  pintarVista();
+}
+
+/* Despacha a la funcion de pintado que corresponda y actualiza titulo,
+   subtitulo y la etiqueta de ocupacion segun la vista activa. */
+function pintarVista() {
+  if (vistaActual === "dia") {
+    const d = new Date(fechaAncla + "T12:00:00");
+    document.getElementById("titulo-semana").textContent = fechaLarga(fechaAncla);
+    document.getElementById("sub-horario").textContent = "Horario laboral de 08:00 a 18:00";
+    document.getElementById("etiqueta-ocupacion").textContent = "Bloques ocupados hoy";
+    pintarGrillaHoras([{ iso: fechaAncla, nombre: NOMBRES_DIA[(d.getDay() + 6) % 7] }]);
+  } else if (vistaActual === "mes") {
+    const d = new Date(fechaAncla + "T12:00:00");
+    document.getElementById("titulo-semana").textContent = `${MESES_LARGO[d.getMonth()][0].toUpperCase()}${MESES_LARGO[d.getMonth()].slice(1)} ${d.getFullYear()}`;
+    document.getElementById("sub-horario").textContent = "Vista mensual · clic en un día para ver su detalle";
+    document.getElementById("etiqueta-ocupacion").textContent = "Citas registradas este mes";
+    pintarCalendarioMes();
+  } else {
+    const dias = construirSemana(fechaAncla);
+    const primero = dias[0], ultimo = dias[dias.length - 1];
+    document.getElementById("titulo-semana").textContent = `Semana del ${fmt.fecha(primero.iso)} al ${fmt.fecha(ultimo.iso)}`;
+    document.getElementById("sub-horario").textContent = "Horario laboral de 08:00 a 18:00 · lunes a sábado";
+    document.getElementById("etiqueta-ocupacion").textContent = "Bloques ocupados esta semana";
+    pintarGrillaHoras(dias);
+  }
+}
+
+/* Clic en un bloque libre del calendario: preselecciona fecha/hora en el
+   formulario de la derecha y lo deja listo para capturar el motivo. */
+function elegirBloqueDesdeCalendario(fecha, hora) {
+  document.getElementById("in-fecha").value = fecha;
+  pintarSlots();
+  const boton = document.querySelector(`#slots .slot[data-hora="${hora}"]`);
+  if (boton) boton.click();
+  irARegistrarCita();
+}
+
+function irARegistrarCita() {
+  document.getElementById("tarjeta-registrar-cita").scrollIntoView({ behavior: "smooth", block: "start" });
+  document.getElementById("sel-vehiculo").focus();
+}
+
+function limpiarFormularioCita() {
+  document.getElementById("sel-vehiculo").selectedIndex = 0;
+  document.getElementById("in-fecha").value = VM.HOY;
+  document.getElementById("in-motivo").value = "";
+  pintarSlots();
 }
 
 /* ------------------------- Confirmar cita (POST real) ------------------------- */
@@ -197,7 +288,7 @@ async function confirmarCita() {
     await vmCargarDatos();               // refresca VM.citas con la nueva cita
     toast("Cita registrada correctamente.", "ok");
     document.getElementById("in-motivo").value = "";
-    pintarCalendario();
+    pintarVista();
     pintarProximas();
     pintarSlots();
   } catch (err) {
@@ -208,17 +299,20 @@ async function confirmarCita() {
   }
 }
 
-/* ------------------------- Calendario semanal ------------------------- */
-function pintarCalendario() {
+/* ------------------------- Cuadricula de horas (dia y semana) ------------------------- */
+function pintarGrillaHoras(dias) {
   const cal = document.getElementById("cal");
+  cal.className = "cal";
+  cal.style.gridTemplateColumns = `74px repeat(${dias.length}, minmax(96px, 1fr))`;
   const partes = [];
   let ocupados = 0;
+  const ultimaCol = dias.length - 1;
 
   /* Encabezados */
   partes.push(`<div class="cal-cell cal-head" style="grid-column:1;grid-row:1"></div>`);
-  DIAS_SEMANA.forEach((d, i) => {
+  dias.forEach((d, i) => {
     const hoy = d.iso === VM.HOY;
-    partes.push(`<div class="cal-cell cal-head ${hoy ? "is-today" : ""} ${i === 5 ? "is-last-col" : ""}"
+    partes.push(`<div class="cal-cell cal-head ${hoy ? "is-today" : ""} ${i === ultimaCol ? "is-last-col" : ""}"
         style="grid-column:${i + 2};grid-row:1">
         <div class="d-name">${d.nombre}</div>
         <div class="d-num">${Number(d.iso.slice(8))}</div>
@@ -231,9 +325,9 @@ function pintarCalendario() {
     const ultimaFila = r === HORAS.length - 1;
     partes.push(`<div class="cal-cell cal-hour ${ultimaFila ? "is-last-row" : ""}" style="grid-column:1;grid-row:${fila}">${h}</div>`);
 
-    DIAS_SEMANA.forEach((d, c) => {
+    dias.forEach((d, c) => {
       const col = c + 2;
-      const clases = `${c === 5 ? "is-last-col" : ""} ${ultimaFila ? "is-last-row" : ""}`;
+      const clases = `${c === ultimaCol ? "is-last-col" : ""} ${ultimaFila ? "is-last-row" : ""}`;
 
       const inicia = VM.citas.find(x => x.fecha === d.iso && x.hora_inicio === h);
       const cubre  = VM.citas.find(x => x.fecha === d.iso && x.hora_inicio < h && x.hora_fin > h);
@@ -255,8 +349,10 @@ function pintarCalendario() {
           </div>
         </div>`);
       } else {
-        partes.push(`<div class="cal-cell cal-slot is-free ${clases}" style="grid-column:${col};grid-row:${fila}"
-             data-demo="Bloque libre: se abriría el formulario E-01 (demostración)."></div>`);
+        const reservable = d.iso >= VM.HOY;
+        partes.push(`<div class="cal-cell cal-slot is-free ${reservable ? "is-reservable" : ""} ${clases}"
+             style="grid-column:${col};grid-row:${fila}"
+             ${reservable ? `data-fecha="${d.iso}" data-hora="${h}" title="Agendar ${h} · ${fmt.fecha(d.iso)}"` : ""}></div>`);
       }
     });
   });
@@ -264,11 +360,54 @@ function pintarCalendario() {
   cal.innerHTML = partes.join("");
   cal.style.gridTemplateRows = `auto repeat(${HORAS.length}, minmax(60px, auto))`;
   document.getElementById("ocupacion").textContent = ocupados;
+}
 
-  cal.addEventListener("click", (e) => {
-    const ev = e.target.closest("[data-cita]");
-    if (ev) abrirDetalle(+ev.dataset.cita);
-  });
+/* ------------------------- Vista de mes ------------------------- */
+function pintarCalendarioMes() {
+  const cal = document.getElementById("cal");
+  cal.className = "cal-mes";
+  cal.style.gridTemplateColumns = "";
+  cal.style.gridTemplateRows = "";
+
+  const ref = new Date(fechaAncla + "T12:00:00");
+  const inicioMes = new Date(ref.getFullYear(), ref.getMonth(), 1);
+  const inicioGrid = lunesDeSemana(isoDeFecha(inicioMes));
+
+  const dias = [];
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(inicioGrid);
+    d.setDate(inicioGrid.getDate() + i);
+    dias.push(d);
+  }
+
+  const encabezados = NOMBRES_DIA.map(n => `<div class="cal-mes-head">${n}</div>`).join("");
+
+  let citasEnMes = 0;
+  const celdas = dias.map(d => {
+    const iso = isoDeFecha(d);
+    const esMesActual = d.getMonth() === ref.getMonth();
+    if (esMesActual) citasEnMes += VM.citas.filter(c => c.fecha === iso && c.estatus_cita !== "Cancelada").length;
+
+    const citasDia = VM.citas.filter(c => c.fecha === iso).sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
+    const visibles = citasDia.slice(0, 3);
+    const resto = citasDia.length - visibles.length;
+
+    const chips = visibles.map(c => {
+      const v = VM.vehiculo(c.id_vehiculo);
+      const col = COLOR_CITA[c.estatus_cita];
+      return `<div class="cal-mes-chip ${c.estatus_cita === "Cancelada" ? "is-cancel" : ""}"
+                   style="--ev:${col.linea};--ev-bg:${col.fondo}">${c.hora_inicio} ${v.placas}</div>`;
+    }).join("");
+
+    return `<div class="cal-mes-dia ${esMesActual ? "" : "is-fuera"} ${iso === VM.HOY ? "is-hoy" : ""}" data-dia="${iso}">
+      <span class="cal-mes-num">${d.getDate()}</span>
+      ${chips}
+      ${resto > 0 ? `<div class="cal-mes-mas">+${resto} más</div>` : ""}
+    </div>`;
+  }).join("");
+
+  cal.innerHTML = encabezados + celdas;
+  document.getElementById("ocupacion").textContent = citasEnMes;
 }
 
 /* ------------------------- Detalle en modal ------------------------- */
@@ -317,7 +456,7 @@ async function cancelarCitaActual() {
     await vmCargarDatos();
     toast("Cita cancelada.", "ok");
     document.getElementById("modal-cita").classList.remove("is-open");
-    pintarCalendario();
+    pintarVista();
     pintarProximas();
     pintarSlots();
   } catch (err) {

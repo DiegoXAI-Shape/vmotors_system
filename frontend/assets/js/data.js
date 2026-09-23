@@ -120,6 +120,16 @@ async function vmCargarDatos() {
   VM.resumenPeriodo = tablero.resumenPeriodo;
 }
 
+/* Vuelve a pedir solo el tablero, con un rango de meses distinto al que
+   trajo vmCargarDatos() al inicio (usado por el selector 6/12 meses). */
+async function vmCargarDashboard(meses) {
+  const tablero = await _fetchJSON(`/api/dashboard?meses=${meses}`);
+  VM.ingresosMensuales = tablero.ingresosMensuales;
+  VM.serviciosPorSemana = tablero.serviciosPorSemana;
+  VM.tiposServicio = tablero.tiposServicio;
+  VM.resumenPeriodo = tablero.resumenPeriodo;
+}
+
 /* VM.listo: promesa que el resto de la app espera antes de pintar nada.
    Las paginas sin data-page (por ahora, solo login.html) no piden datos. */
 VM.listo = (async () => {

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from ..auth import require_auth
 from ..database import query_all
@@ -30,23 +30,23 @@ def _ultimos_meses(n: int) -> list[tuple[int, int]]:
 
 
 @router.get("/dashboard")
-def dashboard():
-    # ---- Facturacion mensual (ultimos 7 meses, incluido el actual) ----
+def dashboard(meses: int = Query(default=7, ge=2, le=24)):
+    # ---- Facturacion mensual (ultimos N meses, incluido el actual) ----
     filas = {
         (int(r["anio"]), int(r["mes"])): r["total"]
         for r in query_all(
-            """SELECT CAST(strftime('%Y', fecha_entrega) AS INTEGER) AS anio,
+            f"""SELECT CAST(strftime('%Y', fecha_entrega) AS INTEGER) AS anio,
                       CAST(strftime('%m', fecha_entrega) AS INTEGER) AS mes,
                       SUM(costo_total) AS total
                  FROM ordenes_servicio
                 WHERE estatus = 'Entregado'
-                  AND fecha_entrega >= date('now', '-7 months', 'start of month')
+                  AND fecha_entrega >= date('now', '-{meses} months', 'start of month')
                 GROUP BY anio, mes"""
         )
     }
     ingresos_mensuales = [
         {"mes": MESES[mes - 1], "valor": round(filas.get((anio, mes), 0) or 0, 2)}
-        for anio, mes in _ultimos_meses(7)
+        for anio, mes in _ultimos_meses(meses)
     ]
 
     # ---- Servicios por semana (ultimas 7 semanas) ----
@@ -75,14 +75,14 @@ def dashboard():
             LIMIT 8"""
     )
 
-    # ---- Indicadores del mismo periodo de 7 meses que ingresos_mensuales ----
+    # ---- Indicadores del mismo periodo que ingresos_mensuales ----
     resumen = query_all(
-        """SELECT COUNT(*) AS ordenes,
+        f"""SELECT COUNT(*) AS ordenes,
                   COALESCE(SUM(costo_total), 0) AS facturacion,
                   AVG(julianday(fecha_entrega) - julianday(fecha_ingreso)) AS dias_promedio
              FROM ordenes_servicio
             WHERE estatus = 'Entregado'
-              AND fecha_entrega >= date('now', '-7 months', 'start of month')"""
+              AND fecha_entrega >= date('now', '-{meses} months', 'start of month')"""
     )[0]
     ordenes_cerradas = resumen["ordenes"] or 0
     facturacion_periodo = round(resumen["facturacion"] or 0, 2)

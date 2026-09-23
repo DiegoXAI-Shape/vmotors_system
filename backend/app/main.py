@@ -19,7 +19,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from .routers import alertas, auth, catalogos, dashboard, ordenes, recepcion  # noqa: E402
+from .routers import alertas, auth, catalogos, dashboard, ordenes, recepcion, reportes  # noqa: E402
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 
@@ -51,6 +51,7 @@ app.include_router(ordenes.router)
 app.include_router(recepcion.router)
 app.include_router(alertas.router)
 app.include_router(dashboard.router)
+app.include_router(reportes.router)
 
 # El prototipo estatico se sirve desde el mismo proceso: las rutas /api/*
 # de arriba se resuelven primero, y cualquier otra ruta cae en los archivos

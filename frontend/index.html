@@ -23,7 +23,7 @@
           <p>Vista instantánea de la carga de trabajo, la ubicación de cada unidad y el avance de las órdenes de servicio abiertas.</p>
         </div>
         <div class="page-actions">
-          <button class="btn" data-demo="Reporte diario generado (demostración).">Reporte del día</button>
+          <button class="btn" id="btn-reporte-dia">Reporte del día</button>
           <a class="btn btn-primary" href="recepcion.html"><span>Recibir vehículo</span></a>
         </div>
       </div>
@@ -60,9 +60,9 @@
               <h3>Facturación por mes</h3>
               <div class="sub" id="sub-rango-ingresos">Órdenes liquidadas (pesos)</div>
             </div>
-            <div class="seg">
-              <button class="is-active" data-demo="Rango de fechas (demostración).">6 meses</button>
-              <button data-demo="Rango de fechas (demostración).">12 meses</button>
+            <div class="seg" id="rango-ingresos">
+              <button class="is-active" data-meses="7">6 meses</button>
+              <button data-meses="13">12 meses</button>
             </div>
           </div>
           <div class="card-body">
@@ -166,17 +166,37 @@ function initPagina() {
     `${citasHoy.length - canceladas} activas · ${canceladas} cancelada${canceladas === 1 ? "" : "s"}`;
   document.getElementById("total-ordenes").textContent = abiertas.length;
 
-  const primeroMes = VM.ingresosMensuales[0], ultimoMes = VM.ingresosMensuales[VM.ingresosMensuales.length - 1];
-  document.getElementById("sub-rango-ingresos").textContent =
-    primeroMes && ultimoMes ? `Órdenes liquidadas · ${primeroMes.mes} a ${ultimoMes.mes} (pesos)` : "Órdenes liquidadas (pesos)";
+  document.getElementById("btn-reporte-dia").addEventListener("click", () => {
+    exportarCSV(`vmotors-reporte-${VM.HOY}.csv`,
+      [
+        { clave: "hora", titulo: "Hora" }, { clave: "placas", titulo: "Placas" },
+        { clave: "unidad", titulo: "Unidad" }, { clave: "cliente", titulo: "Cliente" },
+        { clave: "motivo", titulo: "Motivo" }, { clave: "estatus", titulo: "Estatus" },
+      ],
+      citasHoy.map(c => {
+        const v = VM.vehiculo(c.id_vehiculo), cl = VM.cliente(v.id_cliente);
+        const orden = VM.ordenDeCita(c.id_cita);
+        return {
+          hora: c.hora_inicio, placas: v.placas, unidad: `${v.marca} ${v.modelo}`,
+          cliente: VM.nombreCliente(cl), motivo: c.motivo_ingreso,
+          estatus: orden ? orden.estatus : c.estatus_cita,
+        };
+      }));
+  });
 
   /* ---- Grafico de barras: facturacion mensual ---- */
-  registrarChart(() => barChart(
-    document.getElementById("chart-ingresos"),
-    VM.ingresosMensuales.map(d => ({ etiqueta: d.mes, valor: d.valor })),
-    { alto: 230, resaltarUltima: true, aria: "Facturación mensual",
-      formato: v => fmt.money(v, 0), formatoEje: v => fmt.moneyShort(v) }
-  ));
+  registrarChart(pintarGraficoIngresos);
+
+  document.getElementById("rango-ingresos").addEventListener("click", async (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    document.querySelectorAll("#rango-ingresos button").forEach(x => x.classList.remove("is-active"));
+    b.classList.add("is-active");
+    await vmCargarDashboard(Number(b.dataset.meses));
+    pintarGraficoIngresos();
+    document.getElementById("kpi-ingresos").textContent =
+      fmt.money(VM.ingresosMensuales[VM.ingresosMensuales.length - 1]?.valor || 0, 0);
+  });
 
   /* ---- Grafico de linea: servicios por semana ---- */
   registrarChart(() => lineChart(
@@ -237,6 +257,18 @@ function initPagina() {
       <button class="btn btn-sm" data-demo="Recordatorio enviado al cliente (demostración).">Contactar</button>
     </div>`;
   }).join("");
+}
+
+function pintarGraficoIngresos() {
+  const primeroMes = VM.ingresosMensuales[0], ultimoMes = VM.ingresosMensuales[VM.ingresosMensuales.length - 1];
+  document.getElementById("sub-rango-ingresos").textContent =
+    primeroMes && ultimoMes ? `Órdenes liquidadas · ${primeroMes.mes} a ${ultimoMes.mes} (pesos)` : "Órdenes liquidadas (pesos)";
+  barChart(
+    document.getElementById("chart-ingresos"),
+    VM.ingresosMensuales.map(d => ({ etiqueta: d.mes, valor: d.valor })),
+    { alto: 230, resaltarUltima: true, aria: "Facturación mensual",
+      formato: v => fmt.money(v, 0), formatoEje: v => fmt.moneyShort(v) }
+  );
 }
 </script>
 </body>

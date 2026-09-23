@@ -41,15 +41,12 @@
             <span data-icon="buscar"></span>
             <input type="search" id="q-clientes" placeholder="Nombre, teléfono, RFC o municipio">
           </div>
-          <div class="seg">
-            <button class="is-active">Todos</button>
-            <button data-demo="Filtro por tipo de cliente (demostración).">Persona física</button>
-            <button data-demo="Filtro por tipo de cliente (demostración).">Empresa</button>
+          <div class="seg" id="filtro-tipo-cliente">
+            <button class="is-active" data-tipo="todos">Todos</button>
+            <button data-tipo="fisica">Persona física</button>
+            <button data-tipo="empresa">Empresa</button>
           </div>
           <div style="flex:1 1 auto"></div>
-          <button class="btn btn-sm" data-demo="Filtros avanzados (demostración).">
-            <span data-icon="filtro"></span> Filtros
-          </button>
         </div>
 
         <div class="table-wrap">
@@ -101,6 +98,7 @@
 <script src="assets/js/app.js"></script>
 <script>
 let consultaClientes = "";
+let tipoCliente = "todos";
 let paginadorClientes;
 
 function initPagina() {
@@ -121,6 +119,15 @@ function initPagina() {
 
   document.getElementById("q-clientes").addEventListener("input", (e) => {
     consultaClientes = e.target.value.trim().toLowerCase();
+    paginadorClientes.actualizar(clientesFiltrados().length);
+  });
+
+  document.getElementById("filtro-tipo-cliente").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    document.querySelectorAll("#filtro-tipo-cliente button").forEach(x => x.classList.remove("is-active"));
+    b.classList.add("is-active");
+    tipoCliente = b.dataset.tipo;
     paginadorClientes.actualizar(clientesFiltrados().length);
   });
 
@@ -154,11 +161,17 @@ function initPagina() {
 }
 
 function clientesFiltrados() {
-  if (!consultaClientes) return VM.clientes;
-  return VM.clientes.filter(c => {
-    const texto = `${VM.nombreCliente(c)} ${c.telefono} ${c.rfc || ""} ${c.municipio || ""}`.toLowerCase();
-    return texto.includes(consultaClientes);
-  });
+  return VM.clientes
+    .filter(c => {
+      if (tipoCliente === "fisica") return !c.razon_social;
+      if (tipoCliente === "empresa") return !!c.razon_social;
+      return true;
+    })
+    .filter(c => {
+      if (!consultaClientes) return true;
+      const texto = `${VM.nombreCliente(c)} ${c.telefono} ${c.rfc || ""} ${c.municipio || ""}`.toLowerCase();
+      return texto.includes(consultaClientes);
+    });
 }
 
 function pintarTablaClientes(pagina) {

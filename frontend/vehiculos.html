@@ -87,7 +87,7 @@
       <button class="btn" data-modal-close>Cerrar</button>
       <button class="btn" id="btn-eliminar-vehiculo">Eliminar</button>
       <button class="btn" id="btn-editar-vehiculo">Editar</button>
-      <a class="btn btn-primary" href="reportes.html">Reporte por placa</a>
+      <a class="btn btn-primary" href="reportes.html" id="lnk-reporte-placa">Reporte por placa</a>
     </div>
     <div class="modal-foot" id="mh-foot-editar" hidden>
       <button class="btn" id="btn-cancelar-edicion-veh">Cancelar</button>
@@ -232,6 +232,7 @@ function abrirHistorial(id) {
   vehiculoActual = id;
   document.getElementById("mh-foot-ver").hidden = false;
   document.getElementById("mh-foot-editar").hidden = true;
+  document.getElementById("lnk-reporte-placa").href = `reportes.html?vehiculo=${id}`;
   const v = VM.vehiculo(id);
   const cl = VM.cliente(v.id_cliente);
   const citas = VM.citasDeVehiculo(id).sort((a, b) => b.fecha.localeCompare(a.fecha));

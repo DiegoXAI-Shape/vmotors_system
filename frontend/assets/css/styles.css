@@ -484,6 +484,8 @@ table.tbl td.actions { text-align: right; white-space: nowrap; }
 }
 .seg button:hover { color: var(--ink); }
 .seg button.is-active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-xs); }
+.seg button:disabled { color: var(--ink-3); opacity: .55; cursor: not-allowed; }
+.seg button:disabled:hover { color: var(--ink-3); }
 
 .pagination { display: flex; align-items: center; gap: 4px; }
 .pagination button {
@@ -676,9 +678,10 @@ table.tbl td.actions { text-align: right; white-space: nowrap; }
   background: var(--surface-2); font-size: 11.5px; color: var(--ink-3);
   text-align: right; padding: 8px 10px; font-variant-numeric: tabular-nums; font-weight: 550;
 }
-.cal-slot { position: relative; cursor: pointer; transition: background .12s; }
-.cal-slot:hover { background: var(--surface-2); }
-.cal-slot.is-free:hover::after {
+.cal-slot { position: relative; transition: background .12s; }
+.cal-slot.is-reservable { cursor: pointer; }
+.cal-slot.is-reservable:hover { background: var(--surface-2); }
+.cal-slot.is-reservable:hover::after {
   content: "+ Agendar"; position: absolute; inset: 6px;
   display: grid; place-items: center;
   border: 1px dashed var(--accent); border-radius: 7px;
@@ -696,6 +699,41 @@ table.tbl td.actions { text-align: right; white-space: nowrap; }
 .cal-event .ev-title { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cal-event .ev-sub { color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cal-event.is-cancel { opacity: .6; text-decoration: line-through; }
+
+/* Vista de mes: cuadricula de dias en vez de horas */
+.cal-mes {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.cal-mes-head {
+  background: var(--surface-2); padding: 8px; text-align: center;
+  font-size: 10.5px; font-weight: 650; text-transform: uppercase; letter-spacing: .7px; color: var(--ink-3);
+}
+.cal-mes-dia {
+  background: var(--surface); min-height: 96px; padding: 6px;
+  display: flex; flex-direction: column; gap: 3px;
+  cursor: pointer; transition: background .12s;
+}
+.cal-mes-dia:hover { background: var(--surface-2); }
+.cal-mes-dia.is-fuera { background: var(--surface-2); }
+.cal-mes-dia.is-fuera .cal-mes-num { color: var(--ink-3); }
+.cal-mes-num { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.cal-mes-dia.is-hoy .cal-mes-num {
+  color: #fff; background: var(--accent); width: 20px; height: 20px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center; font-weight: 700;
+}
+.cal-mes-chip {
+  font-size: 9.5px; padding: 1px 5px; border-radius: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  border-left: 2px solid var(--ev, var(--series-1)); background: var(--ev-bg, #eaf2fd); color: var(--ink-2);
+}
+.cal-mes-chip.is-cancel { opacity: .55; text-decoration: line-through; }
+.cal-mes-mas { font-size: 9px; color: var(--ink-3); font-weight: 550; }
 
 /* Selector de bloques horarios (formulario E-01) */
 .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
@@ -904,6 +942,10 @@ table.tbl td.actions { text-align: right; white-space: nowrap; }
   .doc-bar, .no-print { display: none !important; }
   .sheet { box-shadow: none; max-width: none; padding: 0; border-radius: 0; }
   @page { margin: 16mm; }
+
+  /* Cualquier otra pantalla (p.ej. el historial por placa de reportes.html):
+     se imprime solo el contenido, sin el marco de navegacion ni controles. */
+  .sidebar, .topbar, .page-actions, .toolbar, .pagination { display: none !important; }
 }
 
 /* --------------------------------------------------------------------------

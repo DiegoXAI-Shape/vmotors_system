@@ -6,3 +6,4 @@ uvicorn[standard]>=0.29
 itsdangerous>=2.2        # requerido por SessionMiddleware (cookies de sesion firmadas)
 python-dotenv>=1.0
 email-validator>=2.1     # requerido por pydantic.EmailStr
+reportlab>=4.0           # generacion de reportes en PDF (sin dependencias del sistema)

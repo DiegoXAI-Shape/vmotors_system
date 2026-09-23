@@ -23,7 +23,7 @@
           <p>Tres reportes cubren la operación diaria: la agenda del día con bahías libres, el historial acumulado por matrícula y el resumen mensual de facturación.</p>
         </div>
         <div class="page-actions">
-          <button class="btn" data-demo="Reporte descargado en PDF (demostración).">
+          <button class="btn" id="btn-descargar-pdf">
             <span data-icon="descargar"></span> Descargar PDF
           </button>
           <button class="btn btn-dark" data-demo="Envío programado del reporte (demostración).">Programar envío</button>
@@ -41,7 +41,7 @@
         <div class="grid g-4" style="margin-bottom:16px">
           <article class="kpi" style="--kpi-accent: var(--st-recibido)">
             <div class="kpi-label">Citas confirmadas hoy</div><div class="kpi-value num" id="r-citas">0</div>
-            <div class="kpi-foot dim">Jueves 10 de septiembre</div>
+            <div class="kpi-foot dim" id="r-fecha-hoy"></div>
           </article>
           <article class="kpi" style="--kpi-accent: var(--st-terminado)">
             <div class="kpi-label">Bloques libres</div><div class="kpi-value num" id="r-libres">0</div>
@@ -89,7 +89,7 @@
               <select class="select" id="sel-placa"></select>
             </div>
             <div style="flex:1 1 auto"></div>
-            <button class="btn btn-sm" data-demo="Impresión del historial (demostración).">
+            <button class="btn btn-sm" onclick="window.print()">
               <span data-icon="imprimir"></span> Imprimir
             </button>
           </div>
@@ -178,7 +178,11 @@
 <script src="assets/js/data.js"></script>
 <script src="assets/js/app.js"></script>
 <script>
+let pestanaActiva = "diario";
+
 function initPagina() {
+  document.getElementById("r-fecha-hoy").textContent = fechaLarga(VM.HOY);
+
   reporteDiario();
   reportePlaca();
   reporteMensual();
@@ -186,8 +190,20 @@ function initPagina() {
   document.getElementById("tabs").addEventListener("click", (e) => {
     const b = e.target.closest("button");
     if (!b) return;
+    pestanaActiva = b.dataset.tab;
     document.querySelectorAll("[data-panel]").forEach(p => p.hidden = p.dataset.panel !== b.dataset.tab);
     _charts.forEach(f => f());   /* los graficos ocultos necesitan medirse de nuevo */
+  });
+
+  document.getElementById("btn-descargar-pdf").addEventListener("click", () => {
+    if (pestanaActiva === "diario") {
+      window.location.href = "/api/reportes/diario.pdf";
+    } else if (pestanaActiva === "placa") {
+      const idVehiculo = document.getElementById("sel-placa").value;
+      window.location.href = `/api/reportes/placa/${idVehiculo}.pdf`;
+    } else {
+      window.location.href = "/api/reportes/mensual.pdf";
+    }
   });
 }
 
@@ -233,9 +249,18 @@ function reportePlaca() {
   const sel = document.getElementById("sel-placa");
   sel.innerHTML = VM.vehiculos.map(v =>
     `<option value="${v.id_vehiculo}">${v.placas} — ${v.marca} ${v.modelo} ${v.anio}</option>`).join("");
-  sel.value = 1;
+
+  const idParam = Number(new URLSearchParams(window.location.search).get("vehiculo"));
+  const inicial = VM.vehiculo(idParam) ? idParam : VM.vehiculos[0].id_vehiculo;
+  sel.value = inicial;
   sel.addEventListener("change", () => pintarPlaca(+sel.value));
-  pintarPlaca(1);
+  pintarPlaca(inicial);
+
+  if (VM.vehiculo(idParam)) {
+    pestanaActiva = "placa";
+    document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("is-active", b.dataset.tab === "placa"));
+    document.querySelectorAll("[data-panel]").forEach(p => p.hidden = p.dataset.panel !== "placa");
+  }
 }
 
 function pintarPlaca(id) {
