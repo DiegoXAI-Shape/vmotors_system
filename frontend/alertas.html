@@ -24,7 +24,7 @@
         </div>
         <div class="page-actions">
           <button class="btn" id="btn-exportar-alertas">Exportar listado</button>
-          <button class="btn btn-primary" data-demo="Campaña de recordatorios enviada (demostración).">Enviar recordatorios</button>
+          <button class="btn btn-primary" id="btn-recordatorios"><span data-icon="correo"></span> Enviar recordatorios</button>
         </div>
       </div>
 
@@ -168,6 +168,12 @@ function initPagina() {
     paginadorAlertas.actualizar(alertasFiltradas().length);
   });
 
+  document.getElementById("btn-recordatorios").addEventListener("click", () => enviarRecordatorios(null));
+  document.getElementById("tbody-alertas").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-recordar]");
+    if (b) enviarRecordatorios([Number(b.dataset.recordar)]);
+  });
+
   document.getElementById("btn-exportar-alertas").addEventListener("click", () => {
     exportarCSV("vmotors-alertas.csv",
       [
@@ -181,6 +187,35 @@ function initPagina() {
         return { ...a, placas: v.placas, unidad: `${v.marca} ${v.modelo}`, propietario: VM.nombreCliente(cl), telefono: cl.telefono };
       }));
   });
+}
+
+/* Recordatorios por correo: masivo (solo a quien autorizo recibir avisos y
+   no recibio uno en los ultimos 30 dias) o individual desde cada fila. */
+async function enviarRecordatorios(idsVehiculo) {
+  const masivo = !idsVehiculo;
+  if (masivo) {
+    const n = Number(document.getElementById("k-mail").textContent);
+    if (!confirm(`Se enviará un recordatorio de mantenimiento a los ${n} clientes que autorizaron recibir correos ` +
+                 `(se omite a quien ya recibió uno en los últimos 30 días). ¿Continuar?`)) return;
+  }
+  const btn = document.getElementById("btn-recordatorios");
+  btn.disabled = true;
+  try {
+    const r = await vmApi("POST", "/api/alertas/recordatorios",
+                          masivo ? {} : { ids_vehiculo: idsVehiculo, forzar: true });
+    if (!masivo) {
+      const res = r.resultados[0];
+      if (res.ok) avisoEnvio(res, "Recordatorio");
+      else toast(`No se envió: ${res.motivo}`, "warn");
+      return;
+    }
+    const sufijo = r.modo === "simulado" ? " (modo demostración: ver Bandeja de correos)" : "";
+    toast(`${r.enviados} recordatorios enviados, ${r.omitidos} omitidos${sufijo}.`, r.enviados ? "ok" : "warn");
+  } catch (err) {
+    toast(err.message, "danger");
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function alertasFiltradas() {
@@ -218,7 +253,7 @@ function pintarTablaAlertas(pagina) {
         <td>${a.servicio_sugerido}</td>
         <td class="actions">
           ${cl.correo && cl.acepta_promociones
-            ? `<button class="btn btn-sm" data-demo="Correo de recordatorio enviado (demostración).">Enviar correo</button>`
+            ? `<button class="btn btn-sm" data-recordar="${a.id_vehiculo}">${icon("correo")} Enviar correo</button>`
             : `<button class="btn btn-sm" data-demo="Registro de llamada (demostración).">Llamar</button>`}
         </td>
       </tr>`;

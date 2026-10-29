@@ -35,6 +35,26 @@ por omisión: **administrador / vmotors2026** (cámbielo en `backend/.env`
 antes de compartir el enlace si le preocupa la seguridad — ver
 `backend/.env.example`).
 
+## Mejoras de la segunda entrega
+
+| Mejora | Dónde se ve | Cómo funciona |
+|---|---|---|
+| **Enviar comprobante al cliente** desde la página | Orden → Comprobante → *Enviar al cliente* (también *PDF*) | Genera el comprobante en PDF en el servidor y lo manda al correo del cliente (o a otro destinatario). |
+| **Nuevo rol: Cliente** para consultar el estatus de su vehículo | `login.html` → pestaña *Soy cliente* → `portal.html` | El cliente entra con **placas + teléfono registrado** (sin crear cuenta). Ve en qué etapa va su vehículo, fecha de cada avance, diagnóstico, importe, próximas citas, historial y descarga sus comprobantes. Solo ve sus propios vehículos y no tiene acceso a la API del administrador. |
+| **Recordatorios por correo** de mantenimiento y seguimiento de servicio | Alertas preventivas → *Enviar recordatorios* (o *Enviar correo* por fila) | Recordatorio de mantenimiento a las unidades con 6+ meses sin visita, solo a clientes que autorizaron correos y máximo uno cada 30 días. Además, **automáticamente**: al marcar una orden como *Terminado* se avisa "su vehículo está listo", y al marcarla *Entregado* se envía el comprobante. |
+| **Reportes mensuales para el dueño** | Reportes → *Enviar resumen al dueño* | Correo con los indicadores del mes anterior y el PDF de facturación adjunto. También se envía **solo cada mes** a `CORREO_DUENO` mientras el sistema esté encendido. |
+| **Bandeja de correos** | Menú → Bandeja de correos | Registro de todo lo enviado, con vista previa de cada correo. |
+
+**Modo demostración vs. envío real.** Si `backend/.env` no tiene `SMTP_HOST`,
+los correos se generan completos pero no salen a internet (así no se manda
+nada a los clientes ficticios de la base): se revisan en la Bandeja de
+correos. Para envío real basta con llenar las variables `SMTP_*` (ver
+`backend/.env.example`, incluye los pasos para Gmail).
+
+**Para probar el portal del cliente:** en el panel del administrador abra
+cualquier orden "En reparación", copie las placas y el teléfono del cliente,
+cierre sesión y entre en *Soy cliente* con esos datos.
+
 ---
 
 ## 1. Interfaz (`frontend/`)
@@ -61,7 +81,9 @@ información.
 | `orden-detalle.html` | Control de estatus, diagnóstico y desglose de costos | Formulario **E-02** |
 | `comprobante.html` | Hoja de entrega imprimible | Salida **S-02** / Formato **F-02** |
 | `alertas.html` | Motor de alertas de mantenimiento semestral | Reporte preventivo de la Fase IV |
-| `reportes.html` | Reporte diario, historial por placa y resumen mensual | Reportes automatizados |
+| `reportes.html` | Reporte diario, historial por placa y resumen mensual (envío al dueño) | Reportes automatizados |
+| `correos.html` | Bandeja de correos: todo lo que el sistema ha enviado, con vista previa | Comunicación con clientes |
+| `portal.html` | **Portal del cliente**: avance de su vehículo, historial y comprobantes | Rol de cliente |
 
 ### Cómo está hecho
 
@@ -98,9 +120,9 @@ frontend/
 
 ## 2. Backend (`backend/`)
 
-API en FastAPI que lee `database/vmotors.db` y sirve el `frontend/`. Sesión
-de un solo usuario administrador (sin roles ni tabla de usuarios, acorde al
-alcance actual del proyecto).
+API en FastAPI que lee `database/vmotors.db` y sirve el `frontend/`. Dos roles:
+el administrador del taller (usuario y contraseña) y el cliente (placas +
+teléfono, solo lectura de sus propios vehículos).
 
 ```bash
 cd backend
@@ -142,6 +164,12 @@ pytest
 | `GET /api/ordenes_historicas` | Ledger completo de órdenes ya entregadas (para reportes e historial por placa) |
 | `GET /api/alertas` | Unidades con 6+ meses sin visita |
 | `GET /api/dashboard` | Series para las gráficas del tablero y reportes |
+| `GET /api/ordenes/{id}/comprobante.pdf`, `POST .../comprobante/enviar` | Comprobante en PDF y envío por correo |
+| `POST /api/alertas/recordatorios` | Recordatorios de mantenimiento (todas las alertas o las unidades indicadas) |
+| `POST /api/reportes/mensual/enviar` | Resumen mensual al dueño |
+| `GET /api/correos`, `/api/correos/{id}`, `/api/correos/estado` | Bandeja de salida y modo de envío (SMTP o demostración) |
+| `POST /api/portal/login`, `/logout`, `GET /api/portal/mis-vehiculos` | Portal del cliente (placas + teléfono), solo lectura de sus propios vehículos |
+| `GET /api/portal/ordenes/{id}/comprobante.pdf` | Comprobante descargable por el cliente dueño de la orden |
 
 **Seguridad de la sesión**: cookie firmada con `SameSite=Lax` (un sitio
 externo no puede reenviarla en un POST/PATCH/DELETE de otro origen — esa es
@@ -180,7 +208,7 @@ PostgreSQL; el esquema de SQLite es el mismo modelo, adaptado en
 
 ## 4. Estado del proyecto
 
-Sistema funcional de un solo nivel de usuario: interfaz + backend + base de
+Sistema funcional con dos roles (administrador y cliente): interfaz + backend + base de
 datos, con sesión real, datos en vivo en las 12 pantallas, las operaciones
 del día a día (recepción, agenda, Kanban, cierre de orden) escribiendo de
 verdad en la base de datos, edición/cancelación de lo ya creado (cliente,
@@ -190,12 +218,10 @@ donde tenía sentido, los indicadores de "Resumen mensual" calculados sobre
 datos reales (ya no hay números fijos en ninguna pantalla), y una suite de
 pruebas automatizadas (`backend/tests/`) que cubre las reglas de negocio.
 
-Deliberadamente fuera de alcance, porque no tienen un concepto de negocio
-real detrás en el modelo de datos actual: enviar el comprobante por correo,
-imprimir a PDF desde el servidor, programar el envío de un reporte o
-guardar un borrador de recepción. Y, como siguiente etapa mayor: cuando el
-taller lo requiera, sumar roles adicionales (mecánicos) sobre la misma
-base — hoy es deliberadamente un solo nivel de acceso.
+En la segunda entrega se agregaron el envío de comprobantes por correo, el
+portal del cliente, los recordatorios y avisos de seguimiento, y el resumen
+mensual para el dueño (ver "Mejoras de la segunda entrega"). Sigue fuera de
+alcance guardar un borrador de recepción y sumar un rol de mecánico.
 3. Si el sistema deja de vivir en una laptop + túnel, mover el despliegue a
    un servidor propio (el backend ya es un proceso WSGI/ASGI estándar, no
    depende de `cloudflared` para funcionar).
