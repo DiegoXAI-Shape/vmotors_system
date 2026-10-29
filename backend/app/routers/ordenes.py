@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ..auth import require_auth
 from ..database import get_connection, query_all
+from ..notificaciones import avisar_cambio_estatus
 from ..schemas import ETAPAS, OrdenPatchIn, RefaccionOrdenIn
 
 router = APIRouter(prefix="/api", tags=["ordenes"], dependencies=[Depends(require_auth)])
@@ -156,9 +157,18 @@ def actualizar_orden(id_orden: int, cambios: OrdenPatchIn):
             )
 
         con.commit()
-        return {"ok": True, "estatus": nuevo_estatus, "costo_total": nuevo_total}
     finally:
         con.close()
+
+    respuesta = {"ok": True, "estatus": nuevo_estatus, "costo_total": nuevo_total}
+    if nuevo_estatus != actual["estatus"]:
+        # Seguimiento al cliente: "ya esta listo" al terminar y comprobante al
+        # entregar. Se hace despues del commit para que un fallo de correo no
+        # deshaga el cambio de estatus.
+        aviso = avisar_cambio_estatus(id_orden, nuevo_estatus)
+        if aviso is not None:
+            respuesta["notificacion"] = aviso.como_dict()
+    return respuesta
 
 
 def _recalcular_costos(con, id_orden: int) -> float:

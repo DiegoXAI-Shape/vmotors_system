@@ -144,7 +144,8 @@ const NAV = [
     grupo: "Análisis",
     items: [
       { key: "alertas",   label: "Alertas preventivas", href: "alertas.html", icon: "alertas", badge: () => VM.alertas.length, alerta: true },
-      { key: "reportes",  label: "Reportes",    href: "reportes.html",  icon: "reportes"  }
+      { key: "reportes",  label: "Reportes",    href: "reportes.html",  icon: "reportes"  },
+      { key: "correos",   label: "Bandeja de correos", href: "correos.html", icon: "correo" }
     ]
   }
 ];
@@ -177,7 +178,7 @@ function renderShell() {
         </div>`).join("")}
     </nav>
     <div class="sidebar-foot">
-      <span>Versión 0.9 · Prototipo</span>
+      <span>Versión 1.0</span>
       <a href="login.html" data-logout title="Cerrar sesión">${icon("salir")}</a>
     </div>`;
 
@@ -243,7 +244,7 @@ function toast(mensaje, tipo = "info") {
   setTimeout(() => {
     el.classList.remove("is-on");
     setTimeout(() => el.remove(), 250);
-  }, 3000);
+  }, Math.max(3000, String(mensaje).length * 45));
 }
 
 /* Sustituye <span data-icon="nombre"></span> por el SVG correspondiente */
@@ -372,6 +373,63 @@ async function vmApi(method, url, body) {
   try { data = await r.json(); } catch { /* respuesta sin cuerpo */ }
   if (!r.ok) throw new Error(_mensajeError(data));
   return data;
+}
+
+/* -------------------------------------------------------------------------
+   Envio por correo: dialogo para confirmar o cambiar el destinatario
+   ------------------------------------------------------------------------- */
+/**
+ * Muestra un dialogo con el correo prellenado y resuelve con el correo
+ * escrito, o con null si el usuario cancela.
+ * @param {Object} o { titulo, texto, valor, boton, aviso }
+ */
+function pedirCorreo(o = {}) {
+  return new Promise((resolve) => {
+    const fondo = document.createElement("div");
+    fondo.className = "modal-backdrop is-open";
+    fondo.innerHTML = `
+      <div class="modal" style="max-width:460px">
+        <div class="modal-head">
+          <div><h3>${o.titulo || "Enviar por correo"}</h3>
+          ${o.texto ? `<div class="sub dim" style="margin-top:4px;font-size:12.5px">${o.texto}</div>` : ""}</div>
+          <button class="btn btn-ghost btn-icon" data-x>${icon("cerrar")}</button>
+        </div>
+        <form class="modal-body stack" style="gap:12px">
+          <div class="field">
+            <label>Destinatario</label>
+            <input class="input" type="email" name="correo" placeholder="nombre@correo.com" value="${o.valor || ""}" ${o.opcional ? "" : "required"}>
+          </div>
+          ${o.aviso ? `<div class="alert alert-info">${icon("info")}<div style="font-size:12.5px">${o.aviso}</div></div>` : ""}
+          <div class="row" style="justify-content:flex-end;gap:9px">
+            <button class="btn" type="button" data-x>Cancelar</button>
+            <button class="btn btn-primary" type="submit">${icon("correo")} ${o.boton || "Enviar"}</button>
+          </div>
+        </form>
+      </div>`;
+    const cerrar = (valor) => { fondo.remove(); resolve(valor); };
+    fondo.addEventListener("click", (e) => {
+      if (e.target === fondo || e.target.closest("[data-x]")) cerrar(null);
+    });
+    fondo.querySelector("form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      cerrar(fondo.querySelector("input").value.trim());
+    });
+    document.body.appendChild(fondo);
+    const input = fondo.querySelector("input");
+    input.focus();
+    input.select();
+  });
+}
+
+/* Mensaje del resultado de un envio, distinguiendo el modo simulado */
+function avisoEnvio(res, que = "Correo") {
+  if (!res.ok) {
+    toast(`No se pudo enviar: ${res.error || "error desconocido"}`, "danger");
+  } else if (res.modo === "simulado") {
+    toast(`${que} generado para ${res.destinatario}. Modo demostración: revíselo en la Bandeja de correos.`, "ok");
+  } else {
+    toast(`${que} enviado a ${res.destinatario}.`, "ok");
+  }
 }
 
 /* Cierre de sesión real: avisa al backend antes de volver al login */

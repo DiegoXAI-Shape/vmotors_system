@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mi vehículo · VMotors</title>
+<link rel="icon" href="assets/img/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+<style>
+  /* Portal del cliente: pensado primero para celular, que es desde donde
+     el cliente lo va a abrir (por ejemplo, desde el enlace del correo). */
+  body.portal { background: var(--bg); min-height: 100vh; }
+  .pt-bar {
+    background: var(--nav); color: #fff; position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 11px; padding: 12px 18px;
+  }
+  .pt-bar .brand-name { color: #fff; }
+  .pt-bar .pt-salir { margin-left: auto; color: var(--nav-ink); background: transparent; border: 1px solid #2c3340;
+    border-radius: 8px; padding: 6px 11px; font: inherit; font-size: 12.5px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+  .pt-bar .pt-salir svg { width: 15px; height: 15px; }
+  .pt-wrap { max-width: 760px; margin: 0 auto; padding: 22px 16px 60px; }
+  .pt-hola h1 { font-size: 22px; font-weight: 650; letter-spacing: -.4px; }
+  .pt-hola p { color: var(--ink-2); font-size: 13.5px; margin-top: 4px; }
+  .pt-veh { margin-top: 20px; }
+  .pt-veh-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .pt-veh-head h2 { font-size: 17px; font-weight: 650; }
+  .pt-estado { margin-left: auto; }
+  .pt-sec { font-size: 11px; font-weight: 650; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-3); margin: 20px 0 10px; }
+
+  .pt-pasos { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 0; }
+  .pt-paso { position: relative; text-align: center; padding-top: 34px; font-size: 11.5px; color: var(--ink-3); font-weight: 550; }
+  .pt-paso::before {
+    content: ""; position: absolute; top: 10px; left: 0; right: 0; height: 3px; background: var(--border);
+  }
+  .pt-paso:first-child::before { left: 50%; }
+  .pt-paso:last-child::before { right: 50%; }
+  .pt-paso .pt-dot {
+    position: absolute; top: 2px; left: 50%; transform: translateX(-50%);
+    width: 19px; height: 19px; border-radius: 50%; background: var(--surface); border: 2px solid var(--border-strong);
+    display: grid; place-items: center; z-index: 1;
+  }
+  .pt-paso .pt-dot svg { width: 11px; height: 11px; stroke-width: 3; }
+  .pt-paso.is-done { color: var(--ink-2); }
+  .pt-paso.is-done::before { background: var(--good); }
+  .pt-paso.is-done .pt-dot { background: var(--good); border-color: var(--good); color: #fff; }
+  .pt-paso.is-now { color: var(--ink); font-weight: 650; }
+  .pt-paso.is-now::before { background: linear-gradient(90deg, var(--good) 50%, var(--border) 50%); }
+  .pt-paso.is-now .pt-dot { border-color: var(--accent); background: var(--accent); box-shadow: 0 0 0 5px rgba(217,83,30,.16); }
+  .pt-paso .pt-fecha { display: block; font-weight: 450; color: var(--ink-3); font-size: 10.5px; margin-top: 2px; }
+
+  .pt-datos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; }
+  .pt-dato { background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 10px 12px; }
+  .pt-dato .k { font-size: 10.5px; text-transform: uppercase; letter-spacing: .7px; color: var(--ink-3); font-weight: 650; }
+  .pt-dato .v { font-size: 14px; font-weight: 620; margin-top: 3px; }
+
+  .pt-hist { display: flex; flex-direction: column; }
+  .pt-hist-item { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--border); }
+  .pt-hist-item:first-child { border-top: 0; }
+  .pt-hist-item .t { font-size: 13px; font-weight: 600; }
+  .pt-hist-item .s { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+  .pt-hist-item .m { margin-left: auto; text-align: right; flex: 0 0 auto; }
+
+  @media (max-width: 640px) {
+    /* En celular la linea de avance se vuelve vertical para que se lea completa */
+    .pt-pasos { grid-template-columns: 1fr; }
+    .pt-paso { text-align: left; padding: 0 0 18px 34px; }
+    .pt-paso::before { top: 0; bottom: 0; left: 8px; right: auto; width: 3px; height: auto; }
+    .pt-paso:first-child::before { left: 8px; top: 10px; }
+    .pt-paso:last-child::before { right: auto; bottom: auto; height: 10px; }
+    .pt-paso.is-now::before { background: linear-gradient(180deg, var(--good) 50%, var(--border) 50%); }
+    .pt-paso .pt-dot { left: 0; transform: none; top: 0; }
+    .pt-paso .pt-fecha { display: inline; margin-left: 6px; }
+    .pt-datos { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body class="portal">
+
+<header class="pt-bar">
+  <div class="brand-mark">VM</div>
+  <div class="brand-text">
+    <span class="brand-name">VMOTORS</span>
+    <span class="brand-sub">Portal del cliente</span>
+  </div>
+  <button class="pt-salir" id="btn-salir"><span data-icon="salir"></span> Salir</button>
+</header>
+
+<main class="pt-wrap" id="portal">
+  <div class="dim tcenter" style="padding:60px 0">Cargando tu información…</div>
+</main>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+/* Etiquetas pensadas para el cliente (las internas son las del taller) */
+const ETAPA_CLIENTE = {
+  "Pendiente":      "Cita registrada",
+  "Recibido":       "Recibido",
+  "En diagnóstico": "Diagnóstico",
+  "En reparación":  "Reparación",
+  "Terminado":      "Listo para recoger",
+  "Entregado":      "Entregado",
+};
+const MENSAJE_ETAPA = {
+  "Pendiente":      "Tu cita está registrada. Te esperamos en el taller.",
+  "Recibido":       "Ya recibimos tu vehículo y pronto comenzaremos a revisarlo.",
+  "En diagnóstico": "Nuestros técnicos están revisando tu vehículo para identificar la falla.",
+  "En reparación":  "Estamos trabajando en la reparación de tu vehículo.",
+  "Terminado":      "¡Tu vehículo está listo! Ya puedes pasar a recogerlo.",
+};
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+async function initPagina() {
+  document.getElementById("btn-salir").addEventListener("click", async () => {
+    try { await fetch("/api/portal/logout", { method: "POST", credentials: "same-origin" }); } catch { /* igual se sale */ }
+    window.location.href = "login.html?cliente";
+  });
+
+  let datos;
+  try {
+    const r = await fetch("/api/portal/mis-vehiculos", { credentials: "same-origin" });
+    if (r.status === 401) { window.location.href = "login.html?cliente"; return; }
+    if (!r.ok) throw new Error();
+    datos = await r.json();
+  } catch {
+    document.getElementById("portal").innerHTML =
+      `<div class="alert alert-danger">${icon("alerta")}<div>No fue posible cargar tu información. Intenta de nuevo en unos minutos.</div></div>`;
+    return;
+  }
+  pintar(datos);
+}
+
+function pintar({ cliente, etapas, vehiculos }) {
+  const enCurso = vehiculos.filter(v => v.orden_activa).length;
+  document.getElementById("portal").innerHTML = `
+    <div class="pt-hola">
+      <h1>Hola, ${esc(cliente.nombre)}</h1>
+      <p>${enCurso
+        ? `Tienes ${enCurso === 1 ? "un vehículo" : `${enCurso} vehículos`} en servicio con nosotros.`
+        : "Por ahora no tienes ningún vehículo en servicio."}</p>
+    </div>
+    ${vehiculos.map(v => tarjetaVehiculo(v, etapas)).join("")}
+    <p class="dim tcenter" style="font-size:12px;margin-top:28px">
+      ¿Dudas sobre tu servicio? Llámanos al <strong>(81) 8345 6600</strong> · contacto@vmotors.mx
+    </p>`;
+  initIcons(document.getElementById("portal"));
+}
+
+/* hora_prometida puede venir como "HH:MM" o como fecha y hora completas */
+function entregaEstimada(valor) {
+  if (!valor) return "Por confirmar";
+  if (/^\d{4}-\d{2}-\d{2}/.test(valor)) return valor.length > 10 ? fmt.fechaHora(valor) : fmt.fecha(valor);
+  return esc(valor.slice(0, 5)) + " h";
+}
+
+function tarjetaVehiculo(v, etapas) {
+  const o = v.orden_activa;
+  const fechaDe = (estatus) => {
+    const h = o && o.historial.filter(x => x.estatus === estatus).pop();
+    return h ? fmt.fecha(h.fecha) : "";
+  };
+
+  const avance = o ? `
+    <div class="alert ${o.estatus === "Terminado" ? "alert-good" : "alert-info"}" style="margin-top:16px">
+      ${icon(o.estatus === "Terminado" ? "check" : "reloj")}
+      <div><div class="a-title">${ETAPA_CLIENTE[o.estatus]}</div>${MENSAJE_ETAPA[o.estatus] || ""}</div>
+    </div>
+    <ol class="pt-pasos" style="margin-top:22px" aria-label="Avance del servicio">
+      ${etapas.map((e, i) => `
+        <li class="pt-paso ${i < o.etapa ? "is-done" : i === o.etapa ? "is-now" : ""}">
+          <span class="pt-dot">${i < o.etapa ? icon("check") : ""}</span>
+          ${ETAPA_CLIENTE[e]}<span class="pt-fecha">${i <= o.etapa ? fechaDe(e) : ""}</span>
+        </li>`).join("")}
+    </ol>
+    <div class="pt-datos">
+      <div class="pt-dato"><div class="k">Folio</div><div class="v mono">${esc(o.folio)}</div></div>
+      <div class="pt-dato"><div class="k">Ingresó</div><div class="v">${fmt.fecha(o.fecha_ingreso)}</div></div>
+      <div class="pt-dato"><div class="k">Entrega estimada</div><div class="v">${entregaEstimada(o.hora_prometida)}</div></div>
+    </div>
+    <div class="pt-sec">Motivo de ingreso</div>
+    <p style="font-size:13.5px;line-height:1.6">${esc(o.motivo_ingreso)}</p>
+    ${o.diagnostico ? `<div class="pt-sec">Diagnóstico del taller</div>
+      <p style="font-size:13.5px;line-height:1.6">${esc(o.diagnostico)}</p>` : ""}
+    ${o.costo_total > 0 ? `<div class="pt-datos" style="grid-template-columns:1fr">
+      <div class="pt-dato"><div class="k">Importe hasta ahora</div><div class="v num">${fmt.money(o.costo_total)}</div></div></div>` : ""}
+    <div class="row" style="margin-top:14px">
+      <a class="btn btn-sm" href="/api/portal/ordenes/${o.id_orden}/comprobante.pdf">${icon("descargar")} Ver orden en PDF</a>
+    </div>`
+  : `
+    <div class="alert alert-good" style="margin-top:16px">${icon("check")}
+      <div><div class="a-title">Sin servicio en curso</div>
+      ${v.proximo_mantenimiento
+        ? (v.proximo_mantenimiento <= VM.HOY
+            ? `Ya le corresponde su mantenimiento preventivo (desde el <strong>${fmt.fecha(v.proximo_mantenimiento)}</strong>). Llámanos para agendar tu cita.`
+            : `Te recomendamos su próximo mantenimiento preventivo a partir del <strong>${fmt.fecha(v.proximo_mantenimiento)}</strong>.`)
+        : "Cuando lo traigas al taller podrás seguir aquí el avance."}</div>
+    </div>`;
+
+  const citas = v.proximas_citas.length ? `
+    <div class="pt-sec">Próximas citas</div>
+    ${v.proximas_citas.map(c => `<div class="row" style="gap:8px;font-size:13px;margin-bottom:6px">
+      ${icon("agenda")} <strong>${fmt.fecha(c.fecha)} · ${esc(c.hora_inicio.slice(0, 5))}</strong>
+      <span class="dim">${esc(c.motivo_ingreso)}</span></div>`).join("")}` : "";
+
+  const historial = v.historial.length ? `
+    <div class="pt-sec">Historial de servicios (${v.total_visitas})</div>
+    <div class="pt-hist">
+      ${v.historial.map(h => `
+        <div class="pt-hist-item">
+          <div style="min-width:0">
+            <div class="t">${esc((h.diagnostico || h.motivo_ingreso || "Servicio").slice(0, 80))}</div>
+            <div class="s">${fmt.fecha(h.fecha_entrega)} · <span class="mono">${esc(h.folio)}</span>${h.kilometraje ? ` · ${fmt.int(h.kilometraje)} km` : ""}</div>
+          </div>
+          <div class="m">
+            <div class="num" style="font-weight:620;font-size:13px">${fmt.money(h.costo_total)}</div>
+            <a href="/api/portal/ordenes/${h.id_orden}/comprobante.pdf" style="font-size:12px;color:var(--accent)">Comprobante</a>
+          </div>
+        </div>`).join("")}
+    </div>` : "";
+
+  return `
+    <article class="card pt-veh"><div class="card-body">
+      <div class="pt-veh-head">
+        <span data-icon="vehiculos" style="width:22px;height:22px;color:var(--ink-2)"></span>
+        <div>
+          <h2>${esc(v.marca)} ${esc(v.modelo)} ${esc(v.anio)}</h2>
+          <div class="cell-sub"><span class="plate">${esc(v.placas)}</span> · ${esc(v.color || "")} · ${esc(v.transmision)}</div>
+        </div>
+        <div class="pt-estado">${o ? pillOrden(o.estatus) : pill("Sin servicio activo", "st-neutral")}</div>
+      </div>
+      ${avance}${citas}${historial}
+    </div></article>`;
+}
+</script>
+</body>
+</html>

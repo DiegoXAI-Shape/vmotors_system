@@ -8,8 +8,10 @@ quien tenga que levantar su propio backend.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -19,7 +21,10 @@ from starlette.middleware.sessions import SessionMiddleware
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from .routers import alertas, auth, catalogos, dashboard, ordenes, recepcion, reportes  # noqa: E402
+from .reporte_mensual import tarea_programada  # noqa: E402
+from .routers import (  # noqa: E402
+    alertas, auth, catalogos, correos, dashboard, ordenes, portal, recepcion, reportes,
+)
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 
@@ -31,7 +36,19 @@ if SECRET_KEY == DEFAULT_SECRET:
         "cloudflared, defina una clave propia en backend/.env (ver .env.example)."
     )
 
-app = FastAPI(title="VMotors API")
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Envio automatico del resumen mensual al dueno (ver app/reporte_mensual.py)
+    tarea = asyncio.create_task(tarea_programada())
+    try:
+        yield
+    finally:
+        tarea.cancel()
+
+
+app = FastAPI(title="VMotors API", lifespan=lifespan)
 
 # same_site="lax" es la defensa principal contra CSRF aqui: un sitio externo
 # no puede lograr que el navegador reenvie esta cookie en un POST/PATCH/DELETE
@@ -52,6 +69,8 @@ app.include_router(recepcion.router)
 app.include_router(alertas.router)
 app.include_router(dashboard.router)
 app.include_router(reportes.router)
+app.include_router(correos.router)
+app.include_router(portal.router)
 
 # El prototipo estatico se sirve desde el mismo proceso: las rutas /api/*
 # de arriba se resuelven primero, y cualquier otra ruta cae en los archivos

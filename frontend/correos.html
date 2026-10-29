@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bandeja de correos · VMotors</title>
+<link rel="icon" href="assets/img/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body data-page="correos" data-title="Bandeja de correos" data-crumb="Análisis · Comunicación con clientes">
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <div class="main">
+    <header id="topbar"></header>
+    <main class="content">
+
+      <div class="page-head">
+        <div>
+          <h2>Correos enviados por el sistema</h2>
+          <p>Comprobantes, avisos de "vehículo listo", recordatorios de mantenimiento y resúmenes mensuales. Cada envío queda registrado aquí con su contenido.</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn" id="btn-recargar"><span data-icon="reloj"></span> Actualizar</button>
+        </div>
+      </div>
+
+      <div id="aviso-modo" style="margin-bottom:18px"></div>
+
+      <section class="grid g-4" style="margin-bottom:18px">
+        <article class="kpi" style="--kpi-accent: var(--series-1)">
+          <div class="kpi-label">Comprobantes</div><div class="kpi-value num" id="k-comprobante">0</div>
+          <div class="kpi-foot dim">Enviados al entregar o desde la orden</div>
+        </article>
+        <article class="kpi" style="--kpi-accent: var(--good)">
+          <div class="kpi-label">Avisos de seguimiento</div><div class="kpi-value num" id="k-seguimiento">0</div>
+          <div class="kpi-foot dim">"Su vehículo está listo"</div>
+        </article>
+        <article class="kpi" style="--kpi-accent: var(--warning)">
+          <div class="kpi-label">Recordatorios</div><div class="kpi-value num" id="k-recordatorio">0</div>
+          <div class="kpi-foot dim">Mantenimiento preventivo</div>
+        </article>
+        <article class="kpi" style="--kpi-accent: var(--accent)">
+          <div class="kpi-label">Resúmenes al dueño</div><div class="kpi-value num" id="k-reporte_mensual">0</div>
+          <div class="kpi-foot dim">Reporte mensual con PDF</div>
+        </article>
+      </section>
+
+      <article class="card">
+        <div class="toolbar">
+          <div class="search" style="width:280px">
+            <span data-icon="buscar"></span>
+            <input type="search" id="q-correos" placeholder="Destinatario o asunto">
+          </div>
+          <div class="seg" id="filtro-tipo">
+            <button class="is-active" data-value="todos">Todos</button>
+            <button data-value="comprobante">Comprobantes</button>
+            <button data-value="seguimiento">Seguimiento</button>
+            <button data-value="recordatorio">Recordatorios</button>
+            <button data-value="reporte_mensual">Reportes</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="tbl">
+            <thead>
+              <tr><th>Fecha</th><th>Tipo</th><th>Destinatario</th><th>Asunto</th><th>Adjunto</th><th>Estado</th><th></th></tr>
+            </thead>
+            <tbody id="tbody-correos"></tbody>
+          </table>
+        </div>
+        <div class="card-foot"><span id="pie-correos"></span></div>
+      </article>
+
+    </main>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-correo">
+  <div class="modal" style="max-width:680px;width:100%">
+    <div class="modal-head">
+      <div>
+        <h3 id="mc-asunto">Correo</h3>
+        <div class="sub dim" id="mc-sub" style="font-size:12.5px;margin-top:4px"></div>
+      </div>
+      <button class="btn btn-ghost btn-icon" data-modal-close><span data-icon="cerrar"></span></button>
+    </div>
+    <div class="modal-body" style="padding:0;background:#F2F4F7">
+      <iframe id="mc-cuerpo" title="Vista previa del correo" sandbox=""
+              style="width:100%;height:min(62vh,560px);border:0;display:block"></iframe>
+    </div>
+    <div class="modal-foot"><button class="btn" data-modal-close>Cerrar</button></div>
+  </div>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+const TIPOS = {
+  comprobante:     { label: "Comprobante",    cls: "st-recibido"   },
+  seguimiento:     { label: "Seguimiento",    cls: "st-terminado"  },
+  recordatorio:    { label: "Recordatorio",   cls: "st-warn"       },
+  reporte_mensual: { label: "Resumen mensual",cls: "st-reparacion" },
+  prueba:          { label: "Prueba",         cls: "st-neutral"    },
+};
+let correos = [];
+let filtroTipo = "todos";
+let consulta = "";
+
+const escHtml = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+async function initPagina() {
+  document.getElementById("filtro-tipo").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    document.querySelectorAll("#filtro-tipo button").forEach(x => x.classList.remove("is-active"));
+    b.classList.add("is-active");
+    filtroTipo = b.dataset.value;
+    pintar();
+  });
+  document.getElementById("q-correos").addEventListener("input", (e) => {
+    consulta = e.target.value.trim().toLowerCase();
+    pintar();
+  });
+  document.getElementById("btn-recargar").addEventListener("click", cargar);
+  document.getElementById("tbody-correos").addEventListener("click", (e) => {
+    const tr = e.target.closest("[data-id]");
+    if (tr) abrir(Number(tr.dataset.id));
+  });
+  await cargar();
+}
+
+async function cargar() {
+  try {
+    const [estado, lista] = await Promise.all([vmApi("GET", "/api/correos/estado"), vmApi("GET", "/api/correos")]);
+    correos = lista;
+    document.getElementById("aviso-modo").innerHTML = estado.modo === "smtp"
+      ? `<div class="alert alert-good">${icon("check")}<div><div class="a-title">Envío real activado</div>Los correos salen por el servidor SMTP configurado en backend/.env.</div></div>`
+      : `<div class="alert alert-info">${icon("info")}<div><div class="a-title">Modo demostración</div>No hay servidor SMTP configurado, así que los correos no salen a internet: se generan completos y se guardan aquí para revisarlos. Para envío real, defina SMTP_HOST, SMTP_USER y SMTP_PASSWORD en backend/.env.</div></div>`;
+    for (const t of Object.keys(TIPOS)) {
+      const k = document.getElementById(`k-${t}`);
+      if (k) k.textContent = correos.filter(c => c.tipo === t && c.estado === "enviado").length;
+    }
+    pintar();
+  } catch (err) {
+    toast(err.message, "danger");
+  }
+}
+
+function filtrados() {
+  return correos
+    .filter(c => filtroTipo === "todos" || c.tipo === filtroTipo)
+    .filter(c => !consulta || `${c.destinatario} ${c.asunto}`.toLowerCase().includes(consulta));
+}
+
+function pintar() {
+  const lista = filtrados();
+  document.getElementById("tbody-correos").innerHTML = lista.length ? lista.map(c => {
+    const t = TIPOS[c.tipo] || TIPOS.prueba;
+    const estado = c.estado === "fallido"
+      ? pill("Fallido", "st-critical")
+      : pill(c.modo === "smtp" ? "Enviado" : "Generado (demo)", c.modo === "smtp" ? "st-terminado" : "st-neutral");
+    return `<tr data-id="${c.id_correo}" style="cursor:pointer">
+      <td class="nowrap">${fmt.fechaHora(c.fecha)}</td>
+      <td>${pill(t.label, t.cls)}</td>
+      <td class="nowrap">${escHtml(c.destinatario)}</td>
+      <td>${escHtml(c.asunto)}</td>
+      <td class="dim" style="font-size:12px">${escHtml(c.adjunto || "—")}</td>
+      <td title="${escHtml(c.error || "")}">${estado}</td>
+      <td class="actions"><button class="btn btn-sm">${icon("ojo")} Ver</button></td>
+    </tr>`;
+  }).join("") : `<tr><td colspan="7" class="dim tcenter" style="padding:34px">
+      Aún no hay correos. Envíe un comprobante desde una orden, o recordatorios desde Alertas preventivas.</td></tr>`;
+  document.getElementById("pie-correos").textContent = `${lista.length} de ${correos.length} correos`;
+}
+
+async function abrir(id) {
+  try {
+    const c = await vmApi("GET", `/api/correos/${id}`);
+    document.getElementById("mc-asunto").textContent = c.asunto;
+    document.getElementById("mc-sub").textContent =
+      `Para: ${c.destinatario} · ${fmt.fechaHora(c.fecha)}${c.adjunto ? ` · Adjunto: ${c.adjunto}` : ""}` +
+      (c.error ? ` · Error: ${c.error}` : "");
+    document.getElementById("mc-cuerpo").srcdoc = c.cuerpo_html;
+    document.getElementById("modal-correo").classList.add("is-open");
+  } catch (err) {
+    toast(err.message, "danger");
+  }
+}
+</script>
+</body>
+</html>

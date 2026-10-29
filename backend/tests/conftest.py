@@ -74,3 +74,11 @@ def vehiculo_id(auth, cliente_id):
     })
     assert r.status_code == 201
     return r.json()["id_vehiculo"]
+
+
+@pytest.fixture(autouse=True)
+def _correo_simulado(monkeypatch):
+    """Las pruebas nunca mandan correos reales: sin SMTP_HOST todo envio queda
+    solo en la bandeja simulada (tabla correos_enviados de la BD temporal)."""
+    for var in ("SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD", "CORREO_DUENO", "NOTIFICACIONES_AUTOMATICAS"):
+        monkeypatch.delenv(var, raising=False)
