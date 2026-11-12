@@ -178,8 +178,8 @@ function renderShell() {
         </div>`).join("")}
     </nav>
     <div class="sidebar-foot">
-      <span>Versión 1.0</span>
-      <a href="login.html" data-logout title="Cerrar sesión">${icon("salir")}</a>
+      <a href="login.html" class="side-logout" data-logout>${icon("salir")} <span>Cerrar sesión</span></a>
+      <span>v1.1</span>
     </div>`;
 
   const titulo = document.body.dataset.title || "";
@@ -203,6 +203,9 @@ function renderShell() {
         <div class="u-name">Administrador</div>
         <div class="u-role">Taller VMotors</div>
       </div>
+      <a href="login.html" class="btn btn-sm top-logout" data-logout title="Cerrar sesión">
+        ${icon("salir")}<span>Salir</span>
+      </a>
     </div>`;
 
   initMenuMovil(aside);
@@ -426,7 +429,7 @@ function avisoEnvio(res, que = "Correo") {
   if (!res.ok) {
     toast(`No se pudo enviar: ${res.error || "error desconocido"}`, "danger");
   } else if (res.modo === "simulado") {
-    toast(`${que} generado para ${res.destinatario}. Modo demostración: revíselo en la Bandeja de correos.`, "ok");
+    toast(`${que} registrado para ${res.destinatario} (simulado: esa dirección no está autorizada para envío real). Véalo en la Bandeja de correos.`, "ok");
   } else {
     toast(`${que} enviado a ${res.destinatario}.`, "ok");
   }

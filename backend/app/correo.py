@@ -4,7 +4,11 @@ avisos de seguimiento y el resumen mensual para el dueno.
 Funciona en dos modos, segun la configuracion de `backend/.env`:
 
 * **SMTP real**: si `SMTP_HOST` esta definido, el correo sale de verdad por
-  ese servidor (por ejemplo Gmail con una contrasena de aplicacion).
+  ese servidor (por ejemplo Gmail con una contrasena de aplicacion), pero
+  SOLO hacia los destinatarios autorizados en `CORREOS_REALES`. Los datos
+  de muestra usan direcciones inventadas con dominios reales (gmail.com,
+  hotmail.com...), que podrian pertenecer a personas reales; por eso el
+  resto de los destinatarios se procesa igual pero en modo simulado.
 * **Simulado**: si no hay SMTP configurado, el correo NO sale a internet,
   pero se guarda completo en la bandeja de salida (tabla `correos_enviados`)
   y puede revisarse desde la pantalla "Bandeja de correos". Asi el sistema
@@ -87,6 +91,32 @@ def smtp_configurado() -> bool:
     return bool(os.getenv("SMTP_HOST", "").strip())
 
 
+def correos_reales() -> list[str]:
+    """Lista de `CORREOS_REALES`: direcciones completas, dominios
+    (`@uanl.edu.mx` o `uanl.edu.mx`) o `*` para permitir a todos."""
+    crudo = os.getenv("CORREOS_REALES", "").replace(";", ",")
+    return [x.strip().lower() for x in crudo.split(",") if x.strip()]
+
+
+def envio_real_permitido(destinatario: str) -> bool:
+    """True si a este destinatario se le puede mandar un correo de verdad."""
+    if not smtp_configurado():
+        return False
+    d = destinatario.strip().lower()
+    dueno = correo_dueno()
+    if dueno and d == dueno.lower():
+        return True
+    for regla in correos_reales():
+        if regla == "*":
+            return True
+        if "@" in regla and not regla.startswith("@"):
+            if d == regla:
+                return True
+        elif d.endswith("@" + regla.lstrip("@")):
+            return True
+    return False
+
+
 def correo_dueno() -> str | None:
     return (os.getenv("CORREO_DUENO") or "").strip() or None
 
@@ -130,7 +160,7 @@ def enviar(*, tipo: str, destinatario: str, asunto: str, cuerpo_html: str,
     """Envia (o simula) un correo y lo registra en la bandeja de salida."""
     adjuntos = adjuntos or []
     asegurar_tabla()
-    modo = "smtp" if smtp_configurado() else "simulado"
+    modo = "smtp" if envio_real_permitido(destinatario) else "simulado"
     error = None
     if modo == "smtp":
         try:

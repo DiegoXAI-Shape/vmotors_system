@@ -135,8 +135,14 @@ async function cargar() {
   try {
     const [estado, lista] = await Promise.all([vmApi("GET", "/api/correos/estado"), vmApi("GET", "/api/correos")]);
     correos = lista;
+    const autorizados = [...(estado.correos_reales || []), ...(estado.correo_dueno ? [estado.correo_dueno] : [])];
     document.getElementById("aviso-modo").innerHTML = estado.modo === "smtp"
-      ? `<div class="alert alert-good">${icon("check")}<div><div class="a-title">Envío real activado</div>Los correos salen por el servidor SMTP configurado en backend/.env.</div></div>`
+      ? `<div class="alert alert-good">${icon("check")}<div><div class="a-title">Envío real activado</div>
+           ${autorizados.includes("*")
+             ? "Todos los correos salen por el servidor SMTP configurado."
+             : `Solo salen de verdad los correos a: <strong>${autorizados.length ? autorizados.map(escHtml).join(", ") : "(ninguno)"}</strong>.
+                Los demás (como los clientes de los datos de muestra) se procesan igual pero quedan simulados.
+                Ajuste la lista en CORREOS_REALES (backend/.env).`}</div></div>`
       : `<div class="alert alert-info">${icon("info")}<div><div class="a-title">Modo demostración</div>No hay servidor SMTP configurado, así que los correos no salen a internet: se generan completos y se guardan aquí para revisarlos. Para envío real, defina SMTP_HOST, SMTP_USER y SMTP_PASSWORD en backend/.env.</div></div>`;
     for (const t of Object.keys(TIPOS)) {
       const k = document.getElementById(`k-${t}`);
@@ -160,7 +166,7 @@ function pintar() {
     const t = TIPOS[c.tipo] || TIPOS.prueba;
     const estado = c.estado === "fallido"
       ? pill("Fallido", "st-critical")
-      : pill(c.modo === "smtp" ? "Enviado" : "Generado (demo)", c.modo === "smtp" ? "st-terminado" : "st-neutral");
+      : pill(c.modo === "smtp" ? "Enviado (real)" : "Simulado", c.modo === "smtp" ? "st-terminado" : "st-neutral");
     return `<tr data-id="${c.id_correo}" style="cursor:pointer">
       <td class="nowrap">${fmt.fechaHora(c.fecha)}</td>
       <td>${pill(t.label, t.cls)}</td>

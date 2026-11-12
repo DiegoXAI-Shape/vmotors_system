@@ -209,8 +209,9 @@ async function enviarRecordatorios(idsVehiculo) {
       else toast(`No se envió: ${res.motivo}`, "warn");
       return;
     }
-    const sufijo = r.modo === "simulado" ? " (modo demostración: ver Bandeja de correos)" : "";
-    toast(`${r.enviados} recordatorios enviados, ${r.omitidos} omitidos${sufijo}.`, r.enviados ? "ok" : "warn");
+    const reales = r.reales ? `${r.reales} salieron por correo real, el resto quedó simulado` : "todos simulados";
+    toast(`${r.enviados} recordatorios procesados (${reales}) y ${r.omitidos} omitidos. Detalle en la Bandeja de correos.`,
+          r.enviados ? "ok" : "warn");
   } catch (err) {
     toast(err.message, "danger");
   } finally {

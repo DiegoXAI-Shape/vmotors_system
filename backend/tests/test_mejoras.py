@@ -201,3 +201,78 @@ def test_envio_mensual_programado_solo_una_vez(auth, monkeypatch):
     assert revisar_envio_programado() is not None
     assert revisar_envio_programado() is None
     assert len([c for c in _bandeja(auth) if c["tipo"] == "reporte_mensual"]) == 1
+
+
+# ---------------------------------------------------------------------------
+# Envio real solo a destinatarios autorizados (CORREOS_REALES)
+# ---------------------------------------------------------------------------
+
+class _SMTPFalso:
+    """Sustituye a smtplib.SMTP: registra lo que se 'envia' sin red."""
+    enviados: list = []
+
+    def __init__(self, *a, **k): pass
+    def __enter__(self): return self
+    def __exit__(self, *a): return False
+    def starttls(self, **k): pass
+    def login(self, *a): pass
+    def send_message(self, msg): _SMTPFalso.enviados.append(msg["To"])
+
+
+def _smtp_activo(monkeypatch, reales=""):
+    import app.correo as c
+    _SMTPFalso.enviados = []
+    monkeypatch.setattr(c.smtplib, "SMTP", _SMTPFalso)
+    monkeypatch.setenv("SMTP_HOST", "smtp.ejemplo.com")
+    monkeypatch.setenv("SMTP_USER", "taller@ejemplo.com")
+    monkeypatch.setenv("SMTP_PASSWORD", "x")
+    monkeypatch.setenv("CORREOS_REALES", reales)
+
+
+def test_correo_de_muestra_no_sale_aunque_haya_smtp(auth, monkeypatch):
+    _smtp_activo(monkeypatch, reales="isaid@uanl.edu.mx")
+    datos = _orden(auth)  # cliente@ejemplo.com, como los datos de muestra
+    r = auth.post(f"/api/ordenes/{datos['id_orden']}/comprobante/enviar", json={}).json()
+    assert r["ok"] is True and r["modo"] == "simulado"
+    assert _SMTPFalso.enviados == []
+    assert _bandeja(auth)[0]["modo"] == "simulado"
+
+
+def test_correo_autorizado_sale_por_smtp(auth, monkeypatch):
+    _smtp_activo(monkeypatch, reales="isaid@uanl.edu.mx")
+    datos = _orden(auth)
+    r = auth.post(f"/api/ordenes/{datos['id_orden']}/comprobante/enviar",
+                  json={"destinatario": "Isaid@UANL.edu.mx"}).json()
+    assert r["modo"] == "smtp"
+    assert [d.lower() for d in _SMTPFalso.enviados] == ["isaid@uanl.edu.mx"]
+
+
+def test_reglas_de_correos_reales(monkeypatch):
+    import app.correo as c
+    monkeypatch.setenv("SMTP_HOST", "smtp.ejemplo.com")
+    monkeypatch.setenv("CORREOS_REALES", "@uanl.edu.mx; yo@gmail.com")
+    monkeypatch.setenv("CORREO_DUENO", "dueno@vmotors.mx")
+    assert c.envio_real_permitido("alumno@uanl.edu.mx")
+    assert c.envio_real_permitido("yo@gmail.com")
+    assert c.envio_real_permitido("dueno@vmotors.mx")
+    assert not c.envio_real_permitido("jorge.alarcon@gmail.com")
+    assert not c.envio_real_permitido("x@notuanl.edu.mx")
+    monkeypatch.setenv("CORREOS_REALES", "*")
+    assert c.envio_real_permitido("cualquiera@hotmail.com")
+    monkeypatch.delenv("SMTP_HOST")
+    assert not c.envio_real_permitido("cualquiera@hotmail.com")
+
+
+def test_fallo_smtp_queda_registrado(auth, monkeypatch):
+    import app.correo as c
+    _smtp_activo(monkeypatch, reales="*")
+
+    class _Caido(_SMTPFalso):
+        def login(self, *a):
+            raise c.smtplib.SMTPAuthenticationError(535, b"Usuario o contrasena incorrectos")
+
+    monkeypatch.setattr(c.smtplib, "SMTP", _Caido)
+    datos = _orden(auth)
+    r = auth.post(f"/api/ordenes/{datos['id_orden']}/comprobante/enviar", json={}).json()
+    assert r["ok"] is False and "SMTPAuthenticationError" in r["error"]
+    assert _bandeja(auth)[0]["estado"] == "fallido"

@@ -31,6 +31,7 @@ def estado_correo():
     return {
         "modo": "smtp" if correo.smtp_configurado() else "simulado",
         "correo_dueno": correo.correo_dueno(),
+        "correos_reales": correo.correos_reales(),
     }
 
 
@@ -76,6 +77,7 @@ def enviar_recordatorios(datos: RecordatoriosIn):
     return {
         "enviados": sum(1 for r in resultados if r["ok"]),
         "omitidos": sum(1 for r in resultados if not r["ok"]),
+        "reales": sum(1 for r in resultados if r["ok"] and r.get("modo") == "smtp"),
         "modo": "smtp" if correo.smtp_configurado() else "simulado",
         "resultados": resultados,
     }

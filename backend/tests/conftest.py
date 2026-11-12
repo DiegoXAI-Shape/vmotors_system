@@ -80,5 +80,6 @@ def vehiculo_id(auth, cliente_id):
 def _correo_simulado(monkeypatch):
     """Las pruebas nunca mandan correos reales: sin SMTP_HOST todo envio queda
     solo en la bandeja simulada (tabla correos_enviados de la BD temporal)."""
-    for var in ("SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD", "CORREO_DUENO", "NOTIFICACIONES_AUTOMATICAS"):
+    for var in ("SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD", "CORREO_DUENO", "CORREOS_REALES",
+                "NOTIFICACIONES_AUTOMATICAS"):
         monkeypatch.delenv(var, raising=False)

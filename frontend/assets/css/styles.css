@@ -190,6 +190,13 @@ table { border-collapse: collapse; width: 100%; }
   display: flex; justify-content: space-between; align-items: center;
 }
 .sidebar-foot a:hover { color: #fff; }
+.side-logout {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: var(--nav-ink, #c4cad4); font-size: 12.5px; font-weight: 550;
+  padding: 7px 10px; margin-left: -10px; border-radius: 8px; text-decoration: none;
+}
+.side-logout svg { width: 16px; height: 16px; }
+.side-logout:hover { background: rgba(255,255,255,.07); }
 
 /* --------------------------------------------------------------------------
    5. Topbar
@@ -264,6 +271,8 @@ table { border-collapse: collapse; width: 100%; }
 .user-chip { display: flex; align-items: center; gap: 10px; }
 .user-chip .u-name { font-size: 13px; font-weight: 600; line-height: 1.15; }
 .user-chip .u-role { font-size: 11px; color: var(--ink-3); line-height: 1.15; }
+.user-chip .top-logout { margin-left: 6px; gap: 6px; text-decoration: none; }
+.user-chip .top-logout svg { width: 15px; height: 15px; }
 
 /* --------------------------------------------------------------------------
    6. Encabezado de pagina y utilidades
@@ -979,6 +988,7 @@ table.tbl td.actions { text-align: right; white-space: nowrap; }
 @media (max-width: 640px) {
   .topbar-chip { display: none; }
   .user-chip .u-name, .user-chip .u-role { display: none; }
+  .user-chip .top-logout span { display: none; }   /* en celular solo el icono */
   .fg-4 { grid-template-columns: minmax(0,1fr); }
   .page-head h2 { font-size: 19px; }
 }

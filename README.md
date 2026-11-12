@@ -43,13 +43,18 @@ antes de compartir el enlace si le preocupa la seguridad — ver
 | **Nuevo rol: Cliente** para consultar el estatus de su vehículo | `login.html` → pestaña *Soy cliente* → `portal.html` | El cliente entra con **placas + teléfono registrado** (sin crear cuenta). Ve en qué etapa va su vehículo, fecha de cada avance, diagnóstico, importe, próximas citas, historial y descarga sus comprobantes. Solo ve sus propios vehículos y no tiene acceso a la API del administrador. |
 | **Recordatorios por correo** de mantenimiento y seguimiento de servicio | Alertas preventivas → *Enviar recordatorios* (o *Enviar correo* por fila) | Recordatorio de mantenimiento a las unidades con 6+ meses sin visita, solo a clientes que autorizaron correos y máximo uno cada 30 días. Además, **automáticamente**: al marcar una orden como *Terminado* se avisa "su vehículo está listo", y al marcarla *Entregado* se envía el comprobante. |
 | **Reportes mensuales para el dueño** | Reportes → *Enviar resumen al dueño* | Correo con los indicadores del mes anterior y el PDF de facturación adjunto. También se envía **solo cada mes** a `CORREO_DUENO` mientras el sistema esté encendido. |
-| **Bandeja de correos** | Menú → Bandeja de correos | Registro de todo lo enviado, con vista previa de cada correo. |
+| **Bandeja de correos** | Menú → Bandeja de correos | Registro de todo lo enviado, con vista previa de cada correo e indicador de envío real o simulado. |
+| **Cerrar sesión visible** | Botón *Salir* arriba a la derecha y *Cerrar sesión* al pie del menú | Antes solo había un icono pequeño sin texto. |
 
-**Modo demostración vs. envío real.** Si `backend/.env` no tiene `SMTP_HOST`,
-los correos se generan completos pero no salen a internet (así no se manda
-nada a los clientes ficticios de la base): se revisan en la Bandeja de
-correos. Para envío real basta con llenar las variables `SMTP_*` (ver
-`backend/.env.example`, incluye los pasos para Gmail).
+**Envío real y correos de prueba.** Con las variables `SMTP_*` de
+`backend/.env` los correos salen de verdad (ver `backend/.env.example`,
+incluye los pasos para Gmail), pero **solo** a las direcciones de
+`CORREOS_REALES` y a `CORREO_DUENO`. Los clientes de los datos de muestra
+tienen correos inventados con dominios reales (gmail.com, hotmail.com…) que
+podrían pertenecer a personas reales; a ellos el sistema les hace el mismo
+proceso y el correo queda en la Bandeja marcado como *Simulado*, sin salir a
+internet. Sin `SMTP_HOST`, todo queda simulado. Con clientes reales se usa
+`CORREOS_REALES=*`.
 
 **Para probar el portal del cliente:** en el panel del administrador abra
 cualquier orden "En reparación", copie las placas y el teléfono del cliente,
