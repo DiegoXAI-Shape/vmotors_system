@@ -10,14 +10,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
 </head>
-<body class="doc-shell">
+<body class="doc-shell" data-page="comprobante">
 
   <div class="doc-bar">
     <a class="btn" href="orden-detalle.html" id="lnk-volver">Volver a la orden</a>
     <div class="row">
       <span class="dim" style="font-size:12px">Formato F-02 · Comprobante y póliza de servicio</span>
       <button class="btn" onclick="window.print()"><span data-icon="imprimir"></span> Imprimir</button>
-      <button class="btn btn-primary" data-demo="Comprobante enviado por correo (demostración).">Enviar al cliente</button>
+      <a class="btn" id="btn-pdf" href="#"><span data-icon="descargar"></span> PDF</a>
+      <button class="btn btn-primary" id="btn-enviar"><span data-icon="correo"></span> Enviar al cliente</button>
     </div>
   </div>
 
@@ -41,6 +42,8 @@ function initPagina() {
   }
   O = VM.ordenExpandida(candidata);
   document.getElementById("lnk-volver").href = `orden-detalle.html?id=${O.id_orden}`;
+  document.getElementById("btn-pdf").href = `/api/ordenes/${O.id_orden}/comprobante.pdf`;
+  document.getElementById("btn-enviar").addEventListener("click", enviarComprobante);
   const v = O.vehiculo, c = O.cliente;
   const subtotalRef = O.detalle.reduce((s, d) => s + d.cantidad * d.precio_unitario, 0);
 
@@ -160,6 +163,29 @@ function initPagina() {
     <p class="tcenter dim" style="font-size:10.5px;margin-top:34px">
       Documento generado por el sistema VMotors · ${O.folio} · Impreso el ${fmt.fecha(VM.HOY)}
     </p>`;
+}
+
+/* Envia el comprobante en PDF al correo del cliente (o a otro destinatario) */
+async function enviarComprobante() {
+  const c = O.cliente;
+  const destinatario = await pedirCorreo({
+    titulo: `Enviar comprobante ${O.folio}`,
+    texto: `Se adjunta el comprobante en PDF para ${VM.nombreCliente(c)}.`,
+    valor: c.correo || "",
+    boton: "Enviar comprobante",
+    aviso: c.correo ? null : "Este cliente no tiene correo registrado; escriba uno para enviarlo.",
+  });
+  if (!destinatario) return;
+  const btn = document.getElementById("btn-enviar");
+  btn.disabled = true;
+  try {
+    const res = await vmApi("POST", `/api/ordenes/${O.id_orden}/comprobante/enviar`, { destinatario });
+    avisoEnvio(res, "Comprobante");
+  } catch (err) {
+    toast(err.message, "danger");
+  } finally {
+    btn.disabled = false;
+  }
 }
 </script>
 </body>

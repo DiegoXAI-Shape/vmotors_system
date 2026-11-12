@@ -134,6 +134,13 @@ def reporte_placa_pdf(id_vehiculo: int):
 
 @router.get("/mensual.pdf")
 def reporte_mensual_pdf(meses: int = Query(default=7, ge=2, le=24)):
+    pdf = construir_pdf_mensual(meses)
+    return _pdf_response(pdf, f"vmotors-resumen-mensual-{date.today().isoformat()}.pdf")
+
+
+def construir_pdf_mensual(meses: int = 7) -> bytes:
+    """PDF del resumen mensual; lo usa la descarga y el envio al dueno."""
+    meses = int(meses)
     filas = {
         (int(r["anio"]), int(r["mes"])): r["total"]
         for r in query_all(
@@ -191,5 +198,4 @@ def reporte_mensual_pdf(meses: int = Query(default=7, ge=2, le=24)):
         seccion(el, "Servicios por categoría de refacción")
         tabla(el, ["Categoría", "Órdenes"], [[t["nombre"], str(t["valor"])] for t in tipos])
 
-    pdf = generar_pdf(construir)
-    return _pdf_response(pdf, f"vmotors-resumen-mensual-{date.today().isoformat()}.pdf")
+    return generar_pdf(construir)

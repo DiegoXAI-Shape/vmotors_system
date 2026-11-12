@@ -5,3 +5,4 @@
 -r requirements.txt
 pytest>=7.4
 httpx>=0.27      # lo usa fastapi.testclient.TestClient
+Faker>=25.0      # las pruebas reutilizan database/generador.py (catalogo de refacciones)

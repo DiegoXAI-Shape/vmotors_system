@@ -25,6 +25,7 @@ def login(datos: Credenciales, request: Request):
         registrar_intento_fallido(request)
         return {"ok": False, "error": "Usuario o contraseña incorrectos."}
     limpiar_intentos(request)
+    request.session.clear()  # descarta una posible sesion previa de cliente
     request.session["auth"] = True
     request.session["usuario"] = datos.usuario
     return {"ok": True}
@@ -41,4 +42,5 @@ def me(request: Request):
     return {
         "autenticado": bool(request.session.get("auth")),
         "usuario": request.session.get("usuario"),
+        "rol": "administrador" if request.session.get("auth") else request.session.get("rol"),
     }

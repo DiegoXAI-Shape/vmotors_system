@@ -26,7 +26,7 @@
           <button class="btn" id="btn-descargar-pdf">
             <span data-icon="descargar"></span> Descargar PDF
           </button>
-          <button class="btn btn-dark" data-demo="Envío programado del reporte (demostración).">Programar envío</button>
+          <button class="btn btn-dark" id="btn-enviar-dueno"><span data-icon="correo"></span> Enviar resumen al dueño</button>
         </div>
       </div>
 
@@ -193,6 +193,24 @@ function initPagina() {
     pestanaActiva = b.dataset.tab;
     document.querySelectorAll("[data-panel]").forEach(p => p.hidden = p.dataset.panel !== b.dataset.tab);
     _charts.forEach(f => f());   /* los graficos ocultos necesitan medirse de nuevo */
+  });
+
+  document.getElementById("btn-enviar-dueno").addEventListener("click", async () => {
+    let estado = { correo_dueno: null };
+    try { estado = await vmApi("GET", "/api/correos/estado"); } catch { /* sin estado: se pide el correo */ }
+    const destinatario = await pedirCorreo({
+      titulo: "Resumen mensual para el dueño",
+      texto: "Se envía el resumen del mes anterior con el PDF de facturación adjunto.",
+      valor: estado.correo_dueno || "",
+      boton: "Enviar resumen",
+      aviso: "Además, el sistema lo envía solo cada mes al correo configurado en CORREO_DUENO (backend/.env).",
+    });
+    if (!destinatario) return;
+    try {
+      avisoEnvio(await vmApi("POST", "/api/reportes/mensual/enviar", { destinatario }), "Resumen mensual");
+    } catch (err) {
+      toast(err.message, "danger");
+    }
   });
 
   document.getElementById("btn-descargar-pdf").addEventListener("click", () => {
